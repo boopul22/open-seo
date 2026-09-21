@@ -1,39 +1,61 @@
 import { and, count, eq, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { runBatch } from "@/db/runBatch";
-import { account, ga4Connections, gscConnections } from "@/db/schema";
+import {
+  account,
+  ga4Connections,
+  gscConnections,
+  youtubeConnections,
+} from "@/db/schema";
 import { GA4_OAUTH_PROVIDER_ID } from "@/shared/ga4";
 import { GSC_OAUTH_PROVIDER_ID } from "@/shared/gsc";
+import { YOUTUBE_OAUTH_PROVIDER_ID } from "@/shared/youtube";
 
 type AccountInput = {
   userId: string;
-  provider: "gsc" | "ga4";
+  provider: "gsc" | "ga4" | "youtube";
   accountId: string;
 };
 
 function scope(input: AccountInput) {
-  const gsc = input.provider === "gsc";
-  const connections = gsc ? gscConnections : ga4Connections;
+  const providerId =
+    input.provider === "gsc"
+      ? GSC_OAUTH_PROVIDER_ID
+      : input.provider === "ga4"
+        ? GA4_OAUTH_PROVIDER_ID
+        : YOUTUBE_OAUTH_PROVIDER_ID;
+  const connections =
+    input.provider === "gsc"
+      ? gscConnections
+      : input.provider === "ga4"
+        ? ga4Connections
+        : youtubeConnections;
   return {
     connections,
     grant: and(
       eq(account.userId, input.userId),
-      eq(
-        account.providerId,
-        gsc ? GSC_OAUTH_PROVIDER_ID : GA4_OAUTH_PROVIDER_ID,
-      ),
+      eq(account.providerId, providerId),
       eq(account.accountId, input.accountId),
     ),
-    usage: and(
-      eq(connections.connectedByUserId, input.userId),
-      gsc
-        ? // Legacy GSC mappings can use any of this user's grants.
-          or(
-            eq(gscConnections.gscAccountId, input.accountId),
-            isNull(gscConnections.gscAccountId),
+    usage:
+      input.provider === "gsc"
+        ? and(
+            eq(gscConnections.connectedByUserId, input.userId),
+            // Legacy GSC mappings can use any of this user's grants.
+            or(
+              eq(gscConnections.gscAccountId, input.accountId),
+              isNull(gscConnections.gscAccountId),
+            ),
           )
-        : eq(ga4Connections.ga4AccountId, input.accountId),
-    ),
+        : input.provider === "ga4"
+          ? and(
+              eq(ga4Connections.connectedByUserId, input.userId),
+              eq(ga4Connections.ga4AccountId, input.accountId),
+            )
+          : and(
+              eq(youtubeConnections.connectedByUserId, input.userId),
+              eq(youtubeConnections.youtubeAccountId, input.accountId),
+            ),
   };
 }
 

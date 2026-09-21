@@ -7,6 +7,7 @@ import { getIssueTypePageCountsForAudit } from "@/server/features/audit/reposito
 import { BacklinkSnapshotRepository } from "@/server/features/dashboard/repositories/BacklinkSnapshotRepository";
 import { Ga4ConnectionRepository } from "@/server/features/ga4/repositories/Ga4ConnectionRepository";
 import { GscConnectionRepository } from "@/server/features/gsc/repositories/GscConnectionRepository";
+import { YoutubeConnectionRepository } from "@/server/features/youtube/repositories/YoutubeConnectionRepository";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
 import { getLatestResults } from "@/server/features/rank-tracking/services/rankTrackingResults";
 import {
@@ -25,12 +26,19 @@ const MAX_CONFIGS_FOR_OVERVIEW = 5;
 
 export type DashboardActivation = {
   domain: string | null;
+  // "website" | "youtube": YouTube projects skip the website-only cards and
+  // setup steps.
+  projectType: string;
   ga4: {
     connected: boolean;
     propertyDisplayName: string | null;
     cardDismissedAt: string | null;
   };
   gsc: { connected: boolean; siteUrl: string | null };
+  youtube: {
+    connected: boolean;
+    channelTitle: string | null;
+  };
   mcp: {
     authorizedAt: string | null;
     firstToolCallAt: string | null;
@@ -87,10 +95,12 @@ async function getActivation(input: {
   projectId: string;
   organizationId: string;
   domain: string | null;
+  projectType: string;
 }): Promise<DashboardActivation> {
   const [
     ga4,
     gsc,
+    youtube,
     orgActivation,
     projectActivation,
     projectCount,
@@ -99,6 +109,7 @@ async function getActivation(input: {
   ] = await Promise.all([
     Ga4ConnectionRepository.getByProjectId(input.projectId),
     GscConnectionRepository.getByProjectId(input.projectId),
+    YoutubeConnectionRepository.getByProjectId(input.projectId),
     ActivationRepository.getOrganizationActivation(input.organizationId),
     ActivationRepository.getProjectActivation(input.projectId),
     ProjectRepository.countProjects(input.organizationId),
@@ -108,6 +119,7 @@ async function getActivation(input: {
 
   return {
     domain: input.domain,
+    projectType: input.projectType,
     hasMultipleProjects: projectCount > 1,
     hasTeammate,
     dismissedSteps: dismissed.map((row) => row.step),
@@ -117,6 +129,10 @@ async function getActivation(input: {
       cardDismissedAt: projectActivation?.ga4CardDismissedAt ?? null,
     },
     gsc: { connected: gsc !== null, siteUrl: gsc?.siteUrl ?? null },
+    youtube: {
+      connected: youtube !== null,
+      channelTitle: youtube?.channelTitle ?? null,
+    },
     mcp: {
       authorizedAt: orgActivation?.firstMcpAuthorizedAt ?? null,
       firstToolCallAt: orgActivation?.firstMcpToolCallAt ?? null,

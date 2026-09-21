@@ -41,7 +41,7 @@ export const listProjectsTool = {
   config: {
     title: "List projects",
     description:
-      "Lists the user's projects. Uses no credits — does not call DataForSEO. Use this whenever you need a `projectId` for another OpenSEO tool. Returns an array of {id, name, domain, locationCode, languageCode}; pass the `id` value as `projectId`. locationCode/languageCode are the project's default market — tools fall back to them when a call omits location/language args. When the user belongs to several organizations, each project is labeled with its organization and organizationId (pass that to create_project).",
+      "Lists the user's projects. Uses no credits — does not call DataForSEO. Use this whenever you need a `projectId` for another OpenSEO tool. Returns an array of {id, name, domain, projectType, locationCode, languageCode}; pass the `id` value as `projectId`. projectType is website or youtube — YouTube tools read the channel connected on a youtube project. locationCode/languageCode are the project's default market — tools fall back to them when a call omits location/language args. When the user belongs to several organizations, each project is labeled with its organization and organizationId (pass that to create_project).",
     inputSchema: {} as Record<string, never>,
     outputSchema: z.looseObject({
       projects: z.array(
@@ -50,6 +50,7 @@ export const listProjectsTool = {
             id: z.string(),
             name: z.string(),
             domain: z.string().nullable().optional(),
+            projectType: z.string().optional(),
             locationCode: z.number(),
             languageCode: z.string(),
             url: z.string(),
@@ -74,7 +75,7 @@ export const listProjectsTool = {
         ? ["No projects yet. Create one in the dashboard."]
         : projects.map(
             (p) =>
-              `- ${p.id}  ${p.name}${p.domain ? ` (${p.domain})` : ""}${p.organization ? `  organization:${p.organization} [${p.organizationId}]` : ""}  market:${p.locationCode}/${p.languageCode}`,
+              `- ${p.id}  ${p.name}${p.domain ? ` (${p.domain})` : ""}  type:${p.projectType}${p.organization ? `  organization:${p.organization} [${p.organizationId}]` : ""}  market:${p.locationCode}/${p.languageCode}`,
           );
     return mcpResponse({
       text: `Projects (${projects.length}):\n${lines.join("\n")}`,
@@ -86,6 +87,7 @@ export const listProjectsTool = {
           id: p.id,
           name: p.name,
           domain: p.domain,
+          projectType: p.projectType,
           locationCode: p.locationCode,
           languageCode: p.languageCode,
           url: buildDashboardUrl(baseUrl, `/p/${p.id}`),

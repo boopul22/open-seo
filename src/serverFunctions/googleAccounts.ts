@@ -4,7 +4,7 @@ import { GoogleAccountService } from "@/server/features/google/GoogleAccountServ
 import { requireAuthenticatedContext } from "@/serverFunctions/middleware";
 
 const accountSchema = z.object({
-  provider: z.enum(["gsc", "ga4"]),
+  provider: z.enum(["gsc", "ga4", "youtube"]),
   accountId: z.string().min(1),
 });
 

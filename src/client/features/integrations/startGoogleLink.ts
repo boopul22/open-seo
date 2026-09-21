@@ -6,8 +6,10 @@ import { authClient } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { startSelfHostedGa4Link } from "@/serverFunctions/ga4";
 import { startSelfHostedGscLink } from "@/serverFunctions/gsc";
+import { startSelfHostedYoutubeLink } from "@/serverFunctions/youtube";
 import { GA4_OAUTH_PROVIDER_ID } from "@/shared/ga4";
 import { GSC_OAUTH_PROVIDER_ID } from "@/shared/gsc";
+import { YOUTUBE_OAUTH_PROVIDER_ID } from "@/shared/youtube";
 
 const googleProviders = {
   gsc: {
@@ -18,11 +20,15 @@ const googleProviders = {
     providerId: GA4_OAUTH_PROVIDER_ID,
     startSelfHosted: startSelfHostedGa4Link,
   },
+  youtube: {
+    providerId: YOUTUBE_OAUTH_PROVIDER_ID,
+    startSelfHosted: startSelfHostedYoutubeLink,
+  },
 } as const;
 
 function withGoogleLinkErrorParam(
   callbackURL: string,
-  provider: "gsc" | "ga4",
+  provider: "gsc" | "ga4" | "youtube",
 ): string {
   const url = new URL(callbackURL, window.location.origin);
   url.searchParams.set(GOOGLE_LINK_ERROR_PARAM, provider);
@@ -64,7 +70,7 @@ export function useGoogleLinkPending() {
  * analytics and dismissal behavior.
  */
 export async function startGoogleLink(
-  provider: "gsc" | "ga4",
+  provider: "gsc" | "ga4" | "youtube",
   callbackURL: string,
 ): Promise<boolean> {
   if (linkRedirectPending) return false;

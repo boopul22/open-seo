@@ -235,7 +235,11 @@ export function ProjectSwitcher({
             <span className="truncate text-sm font-medium text-base-content">
               {activeProject?.name ?? "Select project"}
             </span>
-            {activeProject?.domain ? (
+            {activeProject?.projectType === "youtube" ? (
+              <span className="truncate text-xs font-normal text-base-content/50">
+                YouTube channel
+              </span>
+            ) : activeProject?.domain ? (
               <span className="truncate text-xs font-normal text-base-content/50">
                 {activeProject.domain}
               </span>
@@ -321,7 +325,11 @@ export function ProjectSwitcher({
                     >
                       <span className="flex min-w-0 flex-1 flex-col">
                         <span className="truncate">{project.name}</span>
-                        {project.domain ? (
+                        {project.projectType === "youtube" ? (
+                          <span className="truncate text-xs text-base-content/50">
+                            YouTube channel
+                          </span>
+                        ) : project.domain ? (
                           <span className="truncate text-xs text-base-content/50">
                             {project.domain}
                           </span>

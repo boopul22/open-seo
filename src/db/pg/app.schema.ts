@@ -65,6 +65,10 @@ export const projects = pgTable(
       .references(() => organization.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     domain: text("domain"),
+    // What the project tracks: a website ("website", the default) or a
+    // YouTube channel ("youtube"). YouTube projects bind their channel through
+    // youtube_connections and leave domain null.
+    projectType: text("project_type").notNull().default("website"),
     // Default DataForSEO location/language for the project, set during
     // onboarding and reused by every project-scoped data call.
     locationCode: integer("location_code").notNull().default(2840),

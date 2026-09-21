@@ -15,6 +15,7 @@ function mapProject(project: {
   id: string;
   name: string;
   domain: string | null;
+  projectType: string;
   locationCode: number;
   languageCode: string;
   createdAt: string;
@@ -23,6 +24,7 @@ function mapProject(project: {
     id: project.id,
     name: project.name,
     domain: project.domain,
+    projectType: project.projectType,
     // Default market for the project's data calls (MCP tools and the web UI
     // fall back to these when a call omits locationCode/languageCode).
     locationCode: project.locationCode,
@@ -104,15 +106,32 @@ function normalizeProjectDomain(domain: string | undefined) {
 
 export async function createProject(
   organizationId: string,
+  userId: string,
   input: CreateProjectInput,
 ) {
   try {
-    const row = await ProjectRepository.createProject(
-      organizationId,
-      input.name,
-      normalizeProjectDomain(input.domain),
-      resolveMarketInput(input),
-    );
+    const row = await ProjectRepository.createProject(organizationId, {
+      name: input.name,
+      domain: normalizeProjectDomain(input.domain),
+      projectType: input.projectType,
+      market: resolveMarketInput(input),
+    });
+    // Bind the picked channel before returning so the new project is usable
+    // everywhere (dashboard, MCP tools) the moment it appears in the list. A
+    // failed binding fails the whole create — a YouTube project without its
+    // channel would be an empty shell. Imported lazily so the website path
+    // never loads the YouTube client.
+    if (input.projectType === "youtube" && input.youtube) {
+      const { YoutubeService } =
+        await import("@/server/features/youtube/services/YoutubeService");
+      await YoutubeService.setChannel({
+        projectId: row.id,
+        organizationId,
+        accountId: input.youtube.accountId,
+        channelId: input.youtube.channelId,
+        userId,
+      });
+    }
     return mapProject(row);
   } catch (error) {
     if (isReservedDefaultConflict(error, input)) {

@@ -21,6 +21,7 @@ const defaultProject = {
   id: "project_default",
   name: "Default",
   domain: null,
+  projectType: "website",
   createdAt: "2026-05-19 12:00:00",
 };
 
@@ -28,6 +29,7 @@ const namedProject = {
   id: "project_acme",
   name: "Acme",
   domain: "acme.com",
+  projectType: "website",
   createdAt: "2026-05-20 12:00:00",
 };
 
@@ -128,39 +130,78 @@ describe("project service", () => {
       const { createProject } = await import("./projects");
 
       await expect(
-        createProject("org_1", { name: "Acme", domain: "acme.com" }),
+        createProject("org_1", "user_1", {
+          name: "Acme",
+          domain: "acme.com",
+          projectType: "website",
+        }),
       ).resolves.toEqual(namedProject);
-      expect(mocks.createProject).toHaveBeenCalledWith(
-        "org_1",
-        "Acme",
-        "acme.com",
-        undefined,
-      );
+      expect(mocks.createProject).toHaveBeenCalledWith("org_1", {
+        name: "Acme",
+        domain: "acme.com",
+        projectType: "website",
+        market: undefined,
+      });
     });
 
     it("derives the native language when only the location is given", async () => {
       mocks.createProject.mockResolvedValue(namedProject);
       const { createProject } = await import("./projects");
 
-      await createProject("org_1", {
+      await createProject("org_1", "user_1", {
         name: "Acme",
         domain: "acme.com",
+        projectType: "website",
         locationCode: 2704,
       });
-      expect(mocks.createProject).toHaveBeenCalledWith(
-        "org_1",
-        "Acme",
-        "acme.com",
-        { locationCode: 2704, languageCode: "vi" },
-      );
+      expect(mocks.createProject).toHaveBeenCalledWith("org_1", {
+        name: "Acme",
+        domain: "acme.com",
+        projectType: "website",
+        market: { locationCode: 2704, languageCode: "vi" },
+      });
+    });
+
+    it("binds the picked channel when creating a YouTube project", async () => {
+      const setChannel = vi.fn();
+      vi.doMock("@/server/features/youtube/services/YoutubeService", () => ({
+        YoutubeService: { setChannel },
+      }));
+      const youtubeProject = {
+        ...namedProject,
+        name: "My Channel",
+        domain: null,
+        projectType: "youtube",
+      };
+      mocks.createProject.mockResolvedValue(youtubeProject);
+      const { createProject } = await import("./projects");
+
+      await expect(
+        createProject("org_1", "user_1", {
+          name: "My Channel",
+          projectType: "youtube",
+          youtube: {
+            accountId: "google-account-1",
+            channelId: "UCabcdefghijklmnopqrstuv",
+          },
+        }),
+      ).resolves.toEqual(youtubeProject);
+      expect(setChannel).toHaveBeenCalledWith({
+        projectId: "project_acme",
+        organizationId: "org_1",
+        accountId: "google-account-1",
+        channelId: "UCabcdefghijklmnopqrstuv",
+        userId: "user_1",
+      });
     });
 
     it("rejects a language DataForSEO does not serve for the location", async () => {
       const { createProject } = await import("./projects");
 
       await expect(
-        createProject("org_1", {
+        createProject("org_1", "user_1", {
           name: "Acme",
+          projectType: "website",
           locationCode: 2840,
           languageCode: "vi",
         }),
@@ -177,7 +218,11 @@ describe("project service", () => {
       const { createProject } = await import("./projects");
 
       await expect(
-        createProject("org_1", { name: "Default", domain: undefined }),
+        createProject("org_1", "user_1", {
+          name: "Default",
+          domain: undefined,
+          projectType: "website",
+        }),
       ).rejects.toMatchObject({ code: "CONFLICT" });
     });
   });

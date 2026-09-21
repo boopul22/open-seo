@@ -40,9 +40,10 @@ describe("create_project MCP tool", () => {
 
     // The schema does not derive languageCode; the service resolves it from
     // the locationCode, so the tool forwards exactly what was validated.
-    expect(mocks.createProject).toHaveBeenCalledWith("org_123", {
+    expect(mocks.createProject).toHaveBeenCalledWith("org_123", "user_123", {
       name: "Acme",
       domain: "acme.com",
+      projectType: "website",
       locationCode: 2840,
     });
     expect(result.structuredContent?.project).toMatchObject({
@@ -71,8 +72,9 @@ describe("create_project MCP tool", () => {
 
     await createProjectTool.handler({ name: "Just a name" }, toolContext);
 
-    expect(mocks.createProject).toHaveBeenCalledWith("org_123", {
+    expect(mocks.createProject).toHaveBeenCalledWith("org_123", "user_123", {
       name: "Just a name",
+      projectType: "website",
     });
   });
 
@@ -157,8 +159,9 @@ describe("create_project with a user-scoped credential", () => {
       userContext,
     );
 
-    expect(mocks.createProject).toHaveBeenCalledWith("org_b", {
+    expect(mocks.createProject).toHaveBeenCalledWith("org_b", "user_123", {
       name: "Acme",
+      projectType: "website",
     });
     // Written back so instrumentation credits the target org.
     expect(userContext.auth).toMatchObject({
@@ -182,8 +185,9 @@ describe("create_project with a user-scoped credential", () => {
 
     await createProjectTool.handler({ name: "Acme" }, userScopedContext);
 
-    expect(mocks.createProject).toHaveBeenCalledWith("org_a", {
+    expect(mocks.createProject).toHaveBeenCalledWith("org_a", "user_123", {
       name: "Acme",
+      projectType: "website",
     });
   });
 });

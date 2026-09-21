@@ -7,6 +7,8 @@ export type ProjectSummary = {
   id: string;
   name: string;
   domain: string | null;
+  // "website" | "youtube" — YouTube projects bind a channel instead of a domain.
+  projectType: string;
   // Default market for the project's data calls.
   locationCode: number;
   languageCode: string;

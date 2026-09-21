@@ -34,6 +34,7 @@ function accountLabel(account: Account) {
 
 export function GooglePropertyPicker({
   provider,
+  itemNoun = "property",
   readOnly = false,
   loading,
   linking = false,
@@ -49,7 +50,8 @@ export function GooglePropertyPicker({
   secondaryAction,
   renderActions,
 }: {
-  provider: "gsc" | "ga4";
+  provider: "gsc" | "ga4" | "youtube";
+  itemNoun?: string;
   readOnly?: boolean;
   loading: boolean;
   linking?: boolean;
@@ -130,7 +132,7 @@ export function GooglePropertyPicker({
       ) : null}
       <div>
         <p className="mb-2 text-sm font-medium">
-          {readOnly ? "Manage Google accounts" : "Choose property"}
+          {readOnly ? "Manage Google accounts" : `Choose ${itemNoun}`}
         </p>
         <button
           ref={trigger}
@@ -146,7 +148,7 @@ export function GooglePropertyPicker({
         >
           <span className="min-w-0">
             <span className="block truncate">
-              {selected?.name ?? "Select a property…"}
+              {selected?.name ?? `Select a ${itemNoun}…`}
             </span>
             {selectedAccount ? (
               <span className="mt-0.5 block truncate text-xs text-base-content/50">
@@ -160,7 +162,7 @@ export function GooglePropertyPicker({
           <div
             id={panelId}
             role="region"
-            aria-label="Google properties"
+            aria-label={`Google ${itemNoun}s`}
             className="mt-2 overflow-hidden rounded-lg border border-base-300 bg-base-100 shadow-sm"
             onKeyDown={(event) => handlePropertyKeyDown(event, close)}
           >
@@ -169,8 +171,8 @@ export function GooglePropertyPicker({
               <input
                 autoFocus
                 type="search"
-                aria-label="Search properties or accounts"
-                placeholder="Search properties or accounts…"
+                aria-label={`Search ${itemNoun}s or accounts`}
+                placeholder={`Search ${itemNoun}s or accounts…`}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 className="min-w-0 w-full bg-transparent text-sm outline-none"
@@ -183,11 +185,11 @@ export function GooglePropertyPicker({
                   className="flex items-center gap-2 p-3 text-sm text-base-content/60"
                 >
                   <span className="loading loading-spinner loading-xs" />
-                  Loading properties…
+                  Loading {itemNoun}s…
                 </p>
               ) : error ? (
                 <div role="alert" className="p-3 text-sm">
-                  <p className="text-error">Couldn't load properties.</p>
+                  <p className="text-error">Couldn't load {itemNoun}s.</p>
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm mt-1"
@@ -238,7 +240,7 @@ export function GooglePropertyPicker({
                       ) : account.unavailable ? (
                         <div className="flex flex-wrap items-center justify-between gap-2 px-2 pb-2 text-sm">
                           <span className="text-base-content/60">
-                            Couldn't load properties
+                            Couldn't load {itemNoun}s
                           </span>
                           <button
                             type="button"
@@ -250,7 +252,7 @@ export function GooglePropertyPicker({
                         </div>
                       ) : account.properties.length === 0 ? (
                         <p className="px-2 pb-3 text-sm text-base-content/50">
-                          No properties available
+                          No {itemNoun}s available
                         </p>
                       ) : (
                         account.properties.map((property) => {
@@ -302,8 +304,8 @@ export function GooglePropertyPicker({
                   {filtered.length === 0 ? (
                     <p className="p-3 text-sm text-base-content/50">
                       {query
-                        ? "No matching properties or accounts"
-                        : "Add a Google account to find properties."}
+                        ? `No matching ${itemNoun}s or accounts`
+                        : `Add a Google account to find ${itemNoun}s.`}
                     </p>
                   ) : null}
                 </>

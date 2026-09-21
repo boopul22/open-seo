@@ -27,7 +27,11 @@ export const createProject = createServerFn({ method: "POST" })
   .validator(createProjectSchema)
   .handler(async ({ data, context }) => {
     requireOrgPermission(context, { project: ["create"] });
-    return ProjectService.createProject(context.organizationId, data);
+    return ProjectService.createProject(
+      context.organizationId,
+      context.userId,
+      data,
+    );
   });
 
 export const updateProject = createServerFn({ method: "POST" })

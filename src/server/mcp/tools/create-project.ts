@@ -111,6 +111,7 @@ export const createProjectTool = {
           id: z.string(),
           name: z.string(),
           domain: z.string().nullable().optional(),
+          projectType: z.string().optional(),
           locationCode: z.number(),
           languageCode: z.string(),
           url: z.string(),
@@ -149,12 +150,13 @@ export const createProjectTool = {
     const input = parsedInput.data;
     const project = await ProjectService.createProject(
       target.organizationId,
+      auth.userId,
       input,
     );
     return mcpResponse({
       text: `Created project ${project.id}  ${project.name}${
         project.domain ? ` (${project.domain})` : ""
-      }  market:${project.locationCode}/${project.languageCode}`,
+      }${project.projectType ? `  type:${project.projectType}` : ""}  market:${project.locationCode}/${project.languageCode}`,
       meta: {
         url: buildDashboardUrl(baseUrl, `/p/${project.id}`),
       },
@@ -163,6 +165,7 @@ export const createProjectTool = {
           id: project.id,
           name: project.name,
           domain: project.domain,
+          ...(project.projectType ? { projectType: project.projectType } : {}),
           locationCode: project.locationCode,
           languageCode: project.languageCode,
           url: buildDashboardUrl(baseUrl, `/p/${project.id}`),

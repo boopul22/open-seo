@@ -16,6 +16,7 @@ export const getDashboardActivation = createServerFn({ method: "POST" })
       projectId: context.projectId,
       organizationId: context.organizationId,
       domain: context.project.domain,
+      projectType: context.project.projectType,
     }),
   );
 

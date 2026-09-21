@@ -80,15 +80,25 @@ async function getProjectById(projectId: string) {
 
 async function createProject(
   organizationId: string,
-  name: string,
-  domain?: string,
-  // Omitted keeps the column defaults.
-  market?: { locationCode: number; languageCode: string },
+  input: {
+    name: string;
+    domain?: string;
+    projectType?: string;
+    // Omitted keeps the column defaults.
+    market?: { locationCode: number; languageCode: string };
+  },
 ) {
   const id = crypto.randomUUID();
   const [row] = await db
     .insert(projects)
-    .values({ id, organizationId, name, domain, ...market })
+    .values({
+      id,
+      organizationId,
+      name: input.name,
+      domain: input.domain,
+      ...(input.projectType ? { projectType: input.projectType } : {}),
+      ...input.market,
+    })
     .returning();
   return row;
 }

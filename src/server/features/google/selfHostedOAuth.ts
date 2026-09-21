@@ -15,6 +15,10 @@ import { getPublicOrigin } from "@/server/mcp/public-origin";
 import { GA4_OAUTH_PROVIDER_ID, GA4_OAUTH_SCOPES } from "@/shared/ga4";
 import { GSC_OAUTH_PROVIDER_ID, GSC_OAUTH_SCOPES } from "@/shared/gsc";
 import {
+  YOUTUBE_OAUTH_PROVIDER_ID,
+  YOUTUBE_OAUTH_SCOPES,
+} from "@/shared/youtube";
+import {
   getGoogleOAuthClientConfig,
   hasSelfHostedGoogleOAuthConfig,
 } from "./oauth-config";
@@ -51,6 +55,14 @@ export const GA4_INTEGRATION: SelfHostedGoogleOAuthIntegration = {
   displayName: "Google Analytics",
   callbackPath: "/api/ga4/oauth/callback",
   scopes: GA4_OAUTH_SCOPES,
+};
+
+export const YOUTUBE_INTEGRATION: SelfHostedGoogleOAuthIntegration = {
+  providerId: YOUTUBE_OAUTH_PROVIDER_ID,
+  stateNamespace: "youtube",
+  displayName: "YouTube",
+  callbackPath: "/api/youtube/oauth/callback",
+  scopes: YOUTUBE_OAUTH_SCOPES,
 };
 
 const oauthStateSchema = z.object({

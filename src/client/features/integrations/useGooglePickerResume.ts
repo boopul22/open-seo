@@ -6,7 +6,7 @@ import {
 
 /** Restore the picker after Google's full-page redirect, scoped to this project. */
 export function useGooglePickerResume(
-  provider: "gsc" | "ga4",
+  provider: "gsc" | "ga4" | "youtube",
   projectId: string,
 ) {
   // null lets the card derive unfinished setup from the saved authorization.

@@ -3,6 +3,7 @@ import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
 
 export function GoogleProjectEmptyState({
   name,
+  noun = "property",
   hasGrant,
   disabled,
   canManage,
@@ -11,6 +12,7 @@ export function GoogleProjectEmptyState({
   children,
 }: {
   name: string;
+  noun?: string;
   hasGrant: boolean;
   disabled: boolean;
   canManage: boolean;
@@ -22,7 +24,7 @@ export function GoogleProjectEmptyState({
     <div className="space-y-4">
       <p className="text-sm text-base-content/70">
         {hasGrant
-          ? `Choose a ${name} property to finish connecting this project.`
+          ? `Choose a ${name} ${noun} to finish connecting this project.`
           : `Connect ${name} to see this project’s data.`}
       </p>
       <div className="flex flex-wrap items-center gap-1">
@@ -43,7 +45,7 @@ export function GoogleProjectEmptyState({
               ? "Opening Google…"
               : canManage
                 ? hasGrant
-                  ? "Choose property"
+                  ? `Choose ${noun}`
                   : "Connect"
                 : "Manage Google accounts"}
           </button>

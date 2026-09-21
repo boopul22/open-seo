@@ -86,6 +86,47 @@ import {
   listSiteAuditsTool,
 } from "@/server/mcp/tools/site-audit-cleanup-tools";
 import { whoamiTool } from "@/server/mcp/tools/whoami";
+import {
+  getYoutubeAudienceBreakdownTool,
+  getYoutubePlaybackLocationsTool,
+  getYoutubeVideoRetentionTool,
+  getYoutubeVideoTrafficTool,
+} from "@/server/mcp/tools/youtube-audience-tools";
+import {
+  getYoutubeKeywordHintsTool,
+  getYoutubeVideoCommentsTool,
+  searchYoutubeVideosTool,
+} from "@/server/mcp/tools/youtube-community-tools";
+import {
+  compareYoutubeKeywordsTool,
+  getYoutubeHighPerformanceKeywordsTool,
+  getYoutubeKeywordGapTool,
+  getYoutubeKeywordIdeasTool,
+  getYoutubeKeywordPerformanceTool,
+} from "@/server/mcp/tools/youtube-keyword-tools";
+import {
+  getYoutubeBestPublishDaysTool,
+  getYoutubeChannelGrowthTool,
+  getYoutubeVideoTrendTool,
+  listYoutubePlaylistsTool,
+} from "@/server/mcp/tools/youtube-performance-tools";
+import {
+  addYoutubeResearchChannelTool,
+  compareYoutubeChannelsTool,
+  getYoutubeChannelStatsTool,
+  getYoutubeOutliersTool,
+  getYoutubeTrendingVideosTool,
+  listYoutubeResearchChannelsTool,
+  listYoutubeVideosTool,
+  refreshYoutubeResearchChannelsTool,
+  removeYoutubeResearchChannelTool,
+} from "@/server/mcp/tools/youtube-research-tools";
+import {
+  getYoutubeChannelOverviewTool,
+  getYoutubeChannelTool,
+  getYoutubeTopVideosTool,
+  getYoutubeTrafficSourcesTool,
+} from "@/server/mcp/tools/youtube-tools";
 
 type ToolSchema = z.ZodType | z.ZodRawShape;
 
@@ -152,7 +193,7 @@ export function createOpenSeoMcpServer(authProps: McpProps) {
       title: "OpenSEO",
       version: "0.0.12",
       description:
-        "SEO research tools for AI agents: keyword research and metrics, SERP and local SERP results, domain and backlink analysis, rank tracking, and Google Search Console performance.",
+        "SEO research tools for AI agents: keyword research and metrics, SERP and local SERP results, domain and backlink analysis, rank tracking, Google Search Console performance, and YouTube channel analytics.",
       websiteUrl: "https://openseo.so",
       icons: [
         {
@@ -221,6 +262,35 @@ export function createOpenSeoMcpServer(authProps: McpProps) {
   register(getGoogleAnalyticsEcommercePerformanceTool);
   register(getGoogleAnalyticsSiteSearchTool);
   register(getGoogleAnalyticsAudienceBreakdownTool);
+  register(getYoutubeChannelTool);
+  register(getYoutubeChannelOverviewTool);
+  register(getYoutubeTopVideosTool);
+  register(getYoutubeTrafficSourcesTool);
+  register(getYoutubeVideoRetentionTool);
+  register(getYoutubeAudienceBreakdownTool);
+  register(getYoutubePlaybackLocationsTool);
+  register(getYoutubeVideoTrafficTool);
+  register(listYoutubeVideosTool);
+  register(getYoutubeOutliersTool);
+  register(getYoutubeChannelStatsTool);
+  register(compareYoutubeChannelsTool);
+  register(getYoutubeTrendingVideosTool);
+  register(addYoutubeResearchChannelTool);
+  register(removeYoutubeResearchChannelTool);
+  register(listYoutubeResearchChannelsTool);
+  register(refreshYoutubeResearchChannelsTool);
+  register(getYoutubeVideoCommentsTool);
+  register(searchYoutubeVideosTool);
+  register(getYoutubeKeywordHintsTool);
+  register(getYoutubeKeywordIdeasTool);
+  register(getYoutubeKeywordPerformanceTool);
+  register(getYoutubeHighPerformanceKeywordsTool);
+  register(getYoutubeKeywordGapTool);
+  register(compareYoutubeKeywordsTool);
+  register(getYoutubeVideoTrendTool);
+  register(getYoutubeChannelGrowthTool);
+  register(getYoutubeBestPublishDaysTool);
+  register(listYoutubePlaylistsTool);
   register(runSiteAuditTool);
   register(listSiteAuditsTool);
   register(deleteSiteAuditTool);

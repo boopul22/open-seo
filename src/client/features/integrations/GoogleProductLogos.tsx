@@ -66,3 +66,22 @@ export function GoogleAnalyticsLogo({
     </svg>
   );
 }
+
+export function YouTubeLogo({ className, ...props }: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      className={className}
+      {...props}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.3 31.3 0 0 0 0 12a31.3 31.3 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.3 31.3 0 0 0 24 12a31.3 31.3 0 0 0-.5-5.8Z"
+        fill="#FF0000"
+      />
+      <path fill="#FFFFFF" d="M9.5 15.6V8.4L15.8 12l-6.3 3.6Z" />
+    </svg>
+  );
+}

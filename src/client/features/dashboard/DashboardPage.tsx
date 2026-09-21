@@ -9,6 +9,7 @@ import {
 } from "@/client/features/dashboard/DashboardCards";
 import { Ga4Card } from "@/client/features/dashboard/Ga4Card";
 import { WorkspaceMergeBanner } from "@/client/features/dashboard/WorkspaceMergeBanner";
+import { YoutubeDashboard } from "@/client/features/youtube/YoutubeDashboard";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   getDashboardActivation,
@@ -81,12 +82,13 @@ export function DashboardPage({ projectId }: { projectId: string }) {
     );
   }
 
-  const showBacklinks = activation.domain !== null;
+  const isYoutubeProject = activation.projectType === "youtube";
+  const showBacklinks = activation.domain !== null && !isYoutubeProject;
   const gscConnected = activation.gsc.connected;
   const ga4Connected = activation.ga4.connected;
 
   const cards = [
-    ...(gscConnected
+    ...(!isYoutubeProject && gscConnected
       ? [
           {
             key: "gsc",
@@ -95,7 +97,7 @@ export function DashboardPage({ projectId }: { projectId: string }) {
           },
         ]
       : []),
-    ...(ga4Connected || !activation.ga4.cardDismissedAt
+    ...(!isYoutubeProject && (ga4Connected || !activation.ga4.cardDismissedAt)
       ? [
           {
             key: "ga4",
@@ -104,16 +106,20 @@ export function DashboardPage({ projectId }: { projectId: string }) {
           },
         ]
       : []),
-    {
-      key: "audit",
-      hasData: overview?.audit != null,
-      node: (
-        <AuditHealthCard
-          projectId={projectId}
-          audit={overview?.audit ?? null}
-        />
-      ),
-    },
+    ...(!isYoutubeProject
+      ? [
+          {
+            key: "audit",
+            hasData: overview?.audit != null,
+            node: (
+              <AuditHealthCard
+                projectId={projectId}
+                audit={overview?.audit ?? null}
+              />
+            ),
+          },
+        ]
+      : []),
     ...(showBacklinks
       ? [
           {
@@ -144,15 +150,19 @@ export function DashboardPage({ projectId }: { projectId: string }) {
           activation={activation}
         />
 
-        {/* Every card is half width on large screens (only the checklist spans).
-          Cards with data render before setup pitches and empty states. */}
-        <div className="grid items-start gap-5 lg:grid-cols-2">
-          {sort(cards, (a, b) => Number(b.hasData) - Number(a.hasData)).map(
-            (card) => (
-              <div key={card.key}>{card.node}</div>
-            ),
-          )}
-        </div>
+        {isYoutubeProject ? (
+          <YoutubeDashboard projectId={projectId} />
+        ) : (
+          /* Every card is half width on large screens (only the checklist spans).
+            Cards with data render before setup pitches and empty states. */
+          <div className="grid items-start gap-5 lg:grid-cols-2">
+            {sort(cards, (a, b) => Number(b.hasData) - Number(a.hasData)).map(
+              (card) => (
+                <div key={card.key}>{card.node}</div>
+              ),
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

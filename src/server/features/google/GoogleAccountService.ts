@@ -2,7 +2,7 @@ import { GoogleAccountRepository } from "./GoogleAccountRepository";
 
 type AccountInput = {
   userId: string;
-  provider: "gsc" | "ga4";
+  provider: "gsc" | "ga4" | "youtube";
   accountId: string;
 };
 

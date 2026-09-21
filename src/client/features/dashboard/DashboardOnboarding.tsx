@@ -49,8 +49,18 @@ export function DashboardOnboarding({
         ),
       ),
   });
+  // YouTube projects have no website to add, no domain competitors, and no
+  // Search Console property, so their checklist only covers the shared steps.
+  const websiteOnlySteps: DashboardSetupStep[] = [
+    "domain",
+    "competitor",
+    "gsc",
+  ];
   const steps = setupSteps.filter(
-    (step) => step.id !== "team" || isHostedClientAuthMode(),
+    (step) =>
+      (step.id !== "team" || isHostedClientAuthMode()) &&
+      (activation.projectType !== "youtube" ||
+        !websiteOnlySteps.includes(step.id)),
   );
   const remaining = steps.filter(
     (step) => getStepStatus(activation, step.id) === "todo",
@@ -72,7 +82,9 @@ export function DashboardOnboarding({
       <header className="border-b border-base-300 px-5 py-5 sm:px-6">
         <h2 className="text-lg font-semibold">Set up your workspace</h2>
         <p className="mt-1 text-sm text-base-content/65">
-          Add your website, connect your tools, and invite your team.
+          {activation.projectType === "youtube"
+            ? "Connect your tools and invite your team."
+            : "Add your website, connect your tools, and invite your team."}
         </p>
       </header>
       {remaining.map((item) => {

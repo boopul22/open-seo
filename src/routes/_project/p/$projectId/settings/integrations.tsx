@@ -2,18 +2,21 @@ import { queryClient } from "@/client/tanstack-db/queryClient";
 import {
   gscConnectionOptions,
   ga4ConnectionOptions,
+  youtubeConnectionOptions,
 } from "@/client/features/integrations/googleConnectionQueries";
 import { createFileRoute } from "@tanstack/react-router";
 import { SearchConsoleConnectionCard } from "@/client/features/gsc/SearchConsoleConnectionCard";
 import { GoogleAnalyticsConnectionCard } from "@/client/features/ga4/GoogleAnalyticsConnectionCard";
+import { YouTubeConnectionCard } from "@/client/features/youtube/YouTubeConnectionCard";
 
 export const Route = createFileRoute(
   "/_project/p/$projectId/settings/integrations",
 )({
   loader: ({ params }) => {
-    // Start both database checks on link intent without holding up navigation.
+    // Start the database checks on link intent without holding up navigation.
     void queryClient.prefetchQuery(gscConnectionOptions(params.projectId));
     void queryClient.prefetchQuery(ga4ConnectionOptions(params.projectId));
+    void queryClient.prefetchQuery(youtubeConnectionOptions(params.projectId));
   },
   component: ProjectIntegrationsRoute,
 });
@@ -41,6 +44,11 @@ function ProjectIntegrationsRoute() {
             </h2>
           }
         />
+      </section>
+
+      <section id="youtube" className="scroll-mt-6 space-y-3">
+        <h2 className="text-sm font-medium text-base-content/50">YouTube</h2>
+        <YouTubeConnectionCard projectId={projectId} />
       </section>
     </div>
   );

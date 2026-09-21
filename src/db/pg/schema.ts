@@ -8,4 +8,7 @@ export * from "./better-auth-schema";
 export * from "./billing.schema";
 export * from "./ga4.schema";
 export * from "./gsc.schema";
+export * from "./youtube.schema";
+export * from "./youtube-research.schema";
+export * from "./youtube-keyword.schema";
 export * from "./telemetry.schema";

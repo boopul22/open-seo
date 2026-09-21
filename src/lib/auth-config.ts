@@ -4,6 +4,10 @@ import { baseAuthOptions } from "@/lib/auth-options";
 import { orgAccessControl, orgRoles } from "@/lib/org-permissions";
 import { GA4_OAUTH_PROVIDER_ID, GA4_OAUTH_SCOPES } from "@/shared/ga4";
 import { GSC_OAUTH_PROVIDER_ID, GSC_OAUTH_SCOPES } from "@/shared/gsc";
+import {
+  YOUTUBE_OAUTH_PROVIDER_ID,
+  YOUTUBE_OAUTH_SCOPES,
+} from "@/shared/youtube";
 
 type OrganizationOptions = NonNullable<Parameters<typeof organization>[0]>;
 
@@ -87,6 +91,17 @@ export function createBaseAuthConfig(options?: {
             discoveryUrl:
               "https://accounts.google.com/.well-known/openid-configuration",
             scopes: [...GA4_OAUTH_SCOPES],
+            accessType: "offline",
+            prompt: "select_account consent",
+            pkce: true,
+          },
+          {
+            providerId: YOUTUBE_OAUTH_PROVIDER_ID,
+            clientId: env.GOOGLE_CLIENT_ID?.trim() ?? "",
+            clientSecret: env.GOOGLE_CLIENT_SECRET?.trim() ?? "",
+            discoveryUrl:
+              "https://accounts.google.com/.well-known/openid-configuration",
+            scopes: [...YOUTUBE_OAUTH_SCOPES],
             accessType: "offline",
             prompt: "select_account consent",
             pkce: true,

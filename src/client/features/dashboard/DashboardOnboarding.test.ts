@@ -18,8 +18,10 @@ vi.mock("./DashboardSetupAction", () => ({
 
 const fresh: DashboardActivation = {
   domain: null,
+  projectType: "website",
   ga4: { connected: false, propertyDisplayName: null, cardDismissedAt: null },
   gsc: { connected: false, siteUrl: null },
+  youtube: { connected: false, channelTitle: null },
   mcp: { authorizedAt: null, firstToolCallAt: null, cardDismissedAt: null },
   competitorClickedAt: null,
   hasMultipleProjects: false,
