@@ -37,7 +37,7 @@ and add an authorized redirect URI matching the deployment origin plus
 | Deployment   | Redirect URI                                             |
 | ------------ | -------------------------------------------------------- |
 | Deployed     | `https://your-openseo-domain.com/api/ga4/oauth/callback` |
-| Local Docker | `http://localhost:3001/api/ga4/oauth/callback`           |
+| Local Docker | `http://localhost:8741/api/ga4/oauth/callback`           |
 
 Keep the existing `/api/gsc/oauth/callback` URI if Search Console uses the same
 client.

@@ -76,6 +76,20 @@ export function toDimensionRows(
   return output;
 }
 
+/** `["date"]` rows as a date-ordered daily series for the trend chart. */
+export function toDailyRows(
+  rows: GscSearchAnalyticsRow[],
+): { date: string; clicks: number; impressions: number }[] {
+  return sort(
+    toDimensionRows(rows).map((row) => ({
+      date: row.key,
+      clicks: row.clicks,
+      impressions: row.impressions,
+    })),
+    (a, b) => a.date.localeCompare(b.date),
+  );
+}
+
 /** Reduce `["query","page"]` rows to one striking-distance row per query.
  *
  *  GSC returns a row per page that ranks for a query, so a query fans out across

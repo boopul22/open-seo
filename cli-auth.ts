@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 import { createApiKeyPlugin } from "./src/lib/auth-api-key";
 import { createBaseAuthConfig } from "./src/lib/auth-config";
 
-const CLI_DEV_BASE_URL = "http://localhost:3000";
+const CLI_DEV_BASE_URL = "http://localhost:8741";
 const baseUrl = process.env.BETTER_AUTH_URL ?? CLI_DEV_BASE_URL;
 
 const baseAuthConfig = createBaseAuthConfig();

@@ -25,11 +25,11 @@ Set `DATAFORSEO_API_KEY` in `.env` using the [DataForSEO setup guide](./DATAFORS
 docker compose up -d
 ```
 
-Open `http://localhost:<PORT>` (default `3001`). The first start builds the app and may take 1-2 minutes; follow progress with `docker compose logs -f`.
+Open `http://localhost:<PORT>` (default `8741`). The first start builds the app and may take 1-2 minutes; follow progress with `docker compose logs -f`.
 
 Optional env values:
 
-- `PORT` (defaults to `3001`)
+- `PORT` (defaults to `8741`)
 - `ALLOWED_HOST` (single reverse-proxy hostname to allow in Vite preview)
 - `AUTH_MODE=local_noauth` (already set in compose)
 - `OPEN_SEO_IMAGE` (defaults to `ghcr.io/every-app/open-seo:latest`)

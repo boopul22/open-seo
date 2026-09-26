@@ -4,6 +4,7 @@ import {
   Brain,
   ClipboardCheck,
   FileText,
+  GitCommitHorizontal,
   Globe,
   LayoutDashboard,
   Link2,
@@ -44,6 +45,11 @@ const projectNavItems = [
     to: "/p/$projectId/search-performance" as const,
     label: "GSC Insights",
     icon: GoogleGlyphMuted,
+  },
+  {
+    to: "/p/$projectId/changes" as const,
+    label: "Change Log",
+    icon: GitCommitHorizontal,
   },
   {
     to: "/p/$projectId/domain" as const,
@@ -139,6 +145,7 @@ export function getProjectNavGroups(projectId: string) {
       label: "My Site",
       items: [
         byPath("/p/$projectId/search-performance"),
+        byPath("/p/$projectId/changes"),
         byPath("/p/$projectId/rank-tracking"),
         byPath("/p/$projectId/saved"),
         byPath("/p/$projectId/audit"),

@@ -19,6 +19,7 @@ import {
   formatCount,
   formatCtr,
 } from "@/client/features/search-performance/SearchPerformanceColumns";
+import { renderChangeMarkers } from "@/client/features/seo-changes/changeMarkers";
 import { getGa4DashboardReport } from "@/serverFunctions/ga4";
 
 function formatTrendDay(date: string): string {
@@ -174,6 +175,7 @@ export function Ga4Card({
                     fill="var(--color-primary)"
                     fillOpacity={0.08}
                   />
+                  {renderChangeMarkers(report.changeMarkers)}
                 </AreaChart>
               </ResponsiveContainer>
             </div>

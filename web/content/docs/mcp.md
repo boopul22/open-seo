@@ -138,6 +138,7 @@ OpenSEO MCP exposes tools for SEO research workflows:
 - Inspect index status, crawl, and canonical for specific URLs (up to 10 per call).
 - Read and update a project's shared context: business, goal, positioning, writing preferences, competitors, key pages, and a research log (free, no credits).
 - Save and read HTML reports on a project (free, no credits).
+- Log changes shipped to a site and read their measured effect: OpenSEO stores Search Console numbers for the 28 days before each change and measures the same pages and queries 14 and 28 days after (free, no credits).
 - List a project's report templates, and save a reusable report brief to the project (free, no credits).
 
 ## What to do after setup

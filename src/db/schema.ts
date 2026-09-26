@@ -2,6 +2,7 @@ import { getDatabaseProvider } from "./provider";
 import * as sqliteApp from "./app.schema";
 import * as sqliteProjectContext from "./project-context.schema";
 import * as sqliteReports from "./reports.schema";
+import * as sqliteSeoChanges from "./seo-changes.schema";
 import * as sqliteReportTemplates from "./report-templates.schema";
 import * as sqliteAudit from "./audit.schema";
 import * as sqliteSam from "./sam.schema";
@@ -16,6 +17,7 @@ import * as sqliteTelemetry from "./telemetry.schema";
 import * as pgApp from "./pg/app.schema";
 import * as pgProjectContext from "./pg/project-context.schema";
 import * as pgReports from "./pg/reports.schema";
+import * as pgSeoChanges from "./pg/seo-changes.schema";
 import * as pgReportTemplates from "./pg/report-templates.schema";
 import * as pgAudit from "./pg/audit.schema";
 import * as pgSam from "./pg/sam.schema";
@@ -41,6 +43,7 @@ import * as pgTelemetry from "./pg/telemetry.schema";
 type AppSchema = typeof sqliteApp &
   typeof sqliteProjectContext &
   typeof sqliteReports &
+  typeof sqliteSeoChanges &
   typeof sqliteReportTemplates &
   typeof sqliteAudit &
   typeof sqliteSam &
@@ -59,6 +62,7 @@ const runtimeSchema =
         ...pgApp,
         ...pgProjectContext,
         ...pgReports,
+        ...pgSeoChanges,
         ...pgReportTemplates,
         ...pgAudit,
         ...pgSam,
@@ -75,6 +79,7 @@ const runtimeSchema =
         ...sqliteApp,
         ...sqliteProjectContext,
         ...sqliteReports,
+        ...sqliteSeoChanges,
         ...sqliteReportTemplates,
         ...sqliteAudit,
         ...sqliteSam,
@@ -112,6 +117,10 @@ export const {
   projectResearchLog,
   reports,
   reportTemplates,
+  seoChanges,
+  seoChangeTargets,
+  seoChangeCheckpoints,
+  seoChangeMetrics,
   audits,
   auditPages,
   auditIssues,

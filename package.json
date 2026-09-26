@@ -12,7 +12,7 @@
     "build": "vite build && tsc --noEmit",
     "lint": "oxlint . --type-aware",
     "lint:fix": "oxlint . --type-aware --fix",
-    "preview": "npm run build && vite preview --port 3001",
+    "preview": "npm run build && vite preview --port 8741",
     "deploy": "npm run db:migrate:prod && npm run build && wrangler deploy -c dist/open_seo_audit/wrangler.json && wrangler deploy",
     "deploy:selfhost": "node scripts/selfhost-deploy-preflight.mjs && vite build --mode selfhost && tsc --noEmit && pnpm alchemy deploy --env-file .env.selfhost --stage selfhost",
     "deploy:postgres": "npm run db:migrate:pg && npm run build && pnpm alchemy deploy --env-file .env.production --stage hosted-prod --adopt",

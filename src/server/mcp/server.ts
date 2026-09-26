@@ -87,6 +87,12 @@ import {
 } from "@/server/mcp/tools/site-audit-cleanup-tools";
 import { whoamiTool } from "@/server/mcp/tools/whoami";
 import {
+  getChangeImpactTool,
+  listChangesTool,
+  logChangeTool,
+  updateChangeTool,
+} from "@/server/mcp/tools/change-log-tools";
+import {
   getYoutubeAudienceBreakdownTool,
   getYoutubePlaybackLocationsTool,
   getYoutubeVideoRetentionTool,
@@ -299,6 +305,10 @@ export function createOpenSeoMcpServer(authProps: McpProps) {
   register(getAuditPagesTool);
   register(saveReportTool);
   register(listReportsTool);
+  register(logChangeTool);
+  register(listChangesTool);
+  register(getChangeImpactTool);
+  register(updateChangeTool);
   register(getReportTool);
   register(deleteReportTool);
   register(listReportTemplatesTool);

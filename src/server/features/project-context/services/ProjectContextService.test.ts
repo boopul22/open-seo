@@ -19,6 +19,8 @@ const mocks = vi.hoisted(() => ({
   appendResearchLogEntry: vi.fn(),
   pruneResearchLogBefore: vi.fn(),
   listTemplates: vi.fn(),
+  listChanges: vi.fn(),
+  listTargets: vi.fn(),
 }));
 
 vi.mock(
@@ -32,6 +34,13 @@ vi.mock(
     ReportTemplateRepository: mocks,
   }),
 );
+
+vi.mock(
+  "@/server/features/seo-changes/repositories/SeoChangeRepository",
+  () => ({ SeoChangeRepository: mocks }),
+);
+
+vi.mock("cloudflare:workers", () => ({ env: {} }));
 
 // The real runBatch needs a Workers runtime; executing the built statements
 // directly preserves what the tests assert on (which repository writes ran).
@@ -62,6 +71,8 @@ describe("project context service", () => {
     mocks.listKeyPages.mockResolvedValue([]);
     mocks.listResearchLog.mockResolvedValue([]);
     mocks.listTemplates.mockResolvedValue([]);
+    mocks.listChanges.mockResolvedValue([]);
+    mocks.listTargets.mockResolvedValue([]);
   });
 
   it("splits typed from custom sections and reports the empty typed ones", async () => {
@@ -330,6 +341,7 @@ describe("project context service", () => {
       keyPages: [],
       researchLog: [],
       reportTemplates: [],
+      recentChanges: [],
     });
 
     expect(markdown).toContain("## Business overview\n\nWe sell paint.");
@@ -350,6 +362,7 @@ describe("project context service", () => {
         competitors: [],
         keyPages: [],
         reportTemplates: [],
+        recentChanges: [],
         researchLog: Array.from({ length: entryCount }, (_, index) => ({
           id: `log_${index}`,
           entryDate: "2026-08-15",

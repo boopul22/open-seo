@@ -3,6 +3,16 @@ import { ProjectContextRepository } from "@/server/features/project-context/repo
 import { resolveContextUpdates } from "@/server/features/project-context/services/contextUpdateOps";
 import { ReportTemplateRepository } from "@/server/features/reports/repositories/ReportTemplateRepository";
 import {
+  RECENT_CHANGES_DAYS,
+  RECENT_CHANGES_LIMIT,
+  SeoChangeService,
+} from "@/server/features/seo-changes/services/SeoChangeService";
+import {
+  SEO_CHANGE_TYPE_LABELS,
+  type SeoChangeStatus,
+  type SeoChangeType,
+} from "@/shared/seo-changes";
+import {
   CUSTOM_SECTION_KEY_PREFIX,
   PROJECT_CONTEXT_SECTION_KEYS,
   PROJECT_CONTEXT_SECTION_LABELS,
@@ -62,19 +72,40 @@ type ProjectContext = {
    * agents discover them.
    */
   reportTemplates: { name: string; description: string }[];
+  /**
+   * Changes shipped to the site recently, from the change log. Listed here so
+   * an agent starting SEO work sees what was just changed and doesn't redo or
+   * undo it.
+   */
+  recentChanges: {
+    id: string;
+    shipDate: string;
+    type: SeoChangeType;
+    summary: string;
+    targets: string[];
+    status: SeoChangeStatus;
+    author: string;
+  }[];
 };
 
 export async function getProjectContext(
   projectId: string,
 ): Promise<ProjectContext> {
-  const [sectionRows, competitors, keyPages, researchLog, reportTemplates] =
-    await Promise.all([
-      ProjectContextRepository.listSections(projectId),
-      ProjectContextRepository.listCompetitors(projectId),
-      ProjectContextRepository.listKeyPages(projectId),
-      ProjectContextRepository.listResearchLog(projectId, RESEARCH_LOG_LIMIT),
-      ReportTemplateRepository.listTemplates(projectId),
-    ]);
+  const [
+    sectionRows,
+    competitors,
+    keyPages,
+    researchLog,
+    reportTemplates,
+    recentChanges,
+  ] = await Promise.all([
+    ProjectContextRepository.listSections(projectId),
+    ProjectContextRepository.listCompetitors(projectId),
+    ProjectContextRepository.listKeyPages(projectId),
+    ProjectContextRepository.listResearchLog(projectId, RESEARCH_LOG_LIMIT),
+    ReportTemplateRepository.listTemplates(projectId),
+    SeoChangeService.listRecentChanges(projectId),
+  ]);
 
   const stored = new Map(sectionRows.map((row) => [row.key, row]));
   // Typed sections keep their declared order, which is also the order the
@@ -118,6 +149,15 @@ export async function getProjectContext(
     reportTemplates: reportTemplates.map((template) => ({
       name: template.name,
       description: template.description,
+    })),
+    recentChanges: recentChanges.map((change) => ({
+      id: change.id,
+      shipDate: change.shipDate,
+      type: change.type,
+      summary: change.summary,
+      targets: change.targets.map((target) => target.value),
+      status: change.status,
+      author: change.author,
     })),
   };
 }
@@ -242,8 +282,8 @@ function pushSection(lines: string[], heading: string, body: string[]) {
  * always listed — an empty one shows up as missing, which is the signal agents
  * use to offer setup.
  *
- * The report-templates section is omitted entirely when there are none, so a
- * project with no templates reads exactly as it did before.
+ * The report-templates and recent-changes sections are omitted entirely when
+ * empty, so a project without them reads exactly as it did before.
  */
 export function renderProjectContextMarkdown(context: ProjectContext): string {
   const lines = ["# Project context", ""];
@@ -315,6 +355,25 @@ export function renderProjectContextMarkdown(context: ProjectContext): string {
       context.reportTemplates.map(
         (template) => `- ${template.name}: ${template.description}`,
       ),
+    );
+  }
+
+  if (context.recentChanges.length > 0) {
+    pushSection(
+      lines,
+      `Recent site changes (last ${RECENT_CHANGES_DAYS} days)`,
+      [
+        ...context.recentChanges.map(
+          (change) =>
+            `- ${change.shipDate} [${SEO_CHANGE_TYPE_LABELS[change.type]}] ${change.summary} — ${change.targets.join(", ")}${
+              change.status === "reverted" ? " (reverted)" : ""
+            } · ${change.id}`,
+        ),
+        "",
+        context.recentChanges.length >= RECENT_CHANGES_LIMIT
+          ? `_Newest ${RECENT_CHANGES_LIMIT} shown; list_changes has the rest._ Don't redo or undo these without checking get_change_impact.`
+          : "Don't redo or undo these without checking get_change_impact.",
+      ],
     );
   }
 

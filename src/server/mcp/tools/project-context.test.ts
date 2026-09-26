@@ -20,6 +20,8 @@ const mocks = vi.hoisted(() => ({
   deleteCompetitors: vi.fn(),
   deleteKeyPages: vi.fn(),
   deleteResearchLogEntries: vi.fn(),
+  listChanges: vi.fn(),
+  listTargets: vi.fn(),
 }));
 
 vi.mock("cloudflare:workers", () => ({ env: {} }));
@@ -44,6 +46,11 @@ vi.mock(
   "@/server/features/reports/repositories/ReportTemplateRepository",
   () => ({ ReportTemplateRepository: mocks }),
 );
+// ...and the recently shipped changes, which live in the change log.
+vi.mock(
+  "@/server/features/seo-changes/repositories/SeoChangeRepository",
+  () => ({ SeoChangeRepository: mocks }),
+);
 
 beforeEach(() => {
   mocks.getProjectForOrganization.mockResolvedValue({ id: "project_1" });
@@ -52,6 +59,8 @@ beforeEach(() => {
   mocks.listKeyPages.mockResolvedValue([]);
   mocks.listResearchLog.mockResolvedValue([]);
   mocks.listTemplates.mockResolvedValue([]);
+  mocks.listChanges.mockResolvedValue([]);
+  mocks.listTargets.mockResolvedValue([]);
 });
 
 describe("update_project_context", () => {

@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
     ? Number(process.env.PORT)
     : env.PORT
       ? Number(env.PORT)
-      : 3001;
+      : 8741;
   const showDevtools = env.VITE_SHOW_DEVTOOLS !== "false";
   const allowedHosts = [
     env.ALLOWED_HOST,

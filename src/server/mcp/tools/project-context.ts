@@ -27,6 +27,7 @@ const contextOutputSchema = z
     keyPages: z.array(looseObjectOutputSchema),
     researchLog: z.array(looseObjectOutputSchema),
     reportTemplates: z.array(looseObjectOutputSchema),
+    recentChanges: z.array(looseObjectOutputSchema).optional(),
     ...optionalMetaOutputSchema,
   })
   .passthrough();
@@ -40,7 +41,7 @@ export const getProjectContextTool = {
   config: {
     title: "Get project context",
     description:
-      "Reads a project's shared memory: business overview, current goal, positioning, writing preferences, custom sections, competitors, key pages, and the recent research log. Uses no credits. Call this before SEO work to ground it in what the user already told OpenSEO, and check the research log before re-buying research. Sections listed as missing are the ones worth filling with update_project_context.",
+      "Reads a project's shared memory: business overview, current goal, positioning, writing preferences, custom sections, competitors, key pages, the recent research log, and changes recently shipped to the site. Uses no credits. Call this before SEO work to ground it in what the user already told OpenSEO, check the research log before re-buying research, and check recent site changes before editing a page they touched. Sections listed as missing are the ones worth filling with update_project_context.",
     inputSchema: getInputSchema,
     outputSchema: contextOutputSchema,
     annotations: {

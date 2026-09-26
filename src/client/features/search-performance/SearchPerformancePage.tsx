@@ -12,6 +12,7 @@ import { TableExportMenu } from "@/client/components/table/TableBulkActionBar";
 import { TablePagination } from "@/client/components/table/TablePagination";
 import { SearchConsoleConnectionCard } from "@/client/features/gsc/SearchConsoleConnectionCard";
 import { SearchPerformanceLoadingState } from "@/client/features/search-performance/SearchPerformanceLoadingState";
+import { SearchTrendChart } from "@/client/features/search-performance/SearchTrendChart";
 import {
   DimensionTable,
   exportDimensionRows,
@@ -225,6 +226,7 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
         ) : (
           <>
             <TotalsCards report={report} />
+            <SearchTrendChart report={report} projectId={projectId} />
             <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100">
               <div className="flex flex-col gap-3 border-b border-base-300 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
                 <div role="tablist" className="tabs tabs-border w-fit">

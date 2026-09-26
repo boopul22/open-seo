@@ -44,6 +44,7 @@ The project-context tools are free and shared with the app and other agents.
 2. This skill requires no section. Read whatever is there, and let the `missingSections` list shape the recommendation: empty context usually means the next step is `seo-project-setup`. Never front-load the full interview.
 3. Before spending credits, check the research log. If the same research ran within the last 30 days, reuse that result and say so instead of re-buying it.
 4. On finish, write back what is durable — anything the user tells you about the business, goal, or positioning, via `update_project_context` — and append a research log entry when a session spends credits: `{ appendResearchLog: { summary: "<what>: <inputs>. Verdict: <conclusion>" } }`.
+5. Before recommending or making an edit to a page, check "Recent site changes" in the project context (or `list_changes` with that page's `url`) so you don't redo or undo a change that is still being measured; `get_change_impact` shows whether it worked. After you change the site yourself, or the user confirms they shipped your recommendations, call `log_change` once per deploy or logical edit: the pages (paths or full URLs; `/tools/*` for a template), the target queries, the before/after title and description when they changed, and the commit, deploy ID or PR link. It is free; OpenSEO stores the Search Console baseline and measures the same pages 14 and 28 days later. If a logged change is rolled back, call `update_change` with `reverted: true`.
 
 ## First response
 
@@ -103,6 +104,7 @@ Explain the difference between data sources:
 - Web search can find current market context, recent pages, reviews, docs, social profiles, and contact paths outside OpenSEO.
 - Browser/page scraping can extract page copy, headings, author names, contact links, schema, and content structure.
 - Project context (`get_project_context` / `update_project_context`) is the project's shared memory: business, goal, positioning, writing preferences, competitors, key pages, and a research log. It is free, every skill reads it, and the user can edit it on the project's Context page (in the sidebar under AI).
+- The change log (`log_change`, `list_changes`, `get_change_impact`, `update_change`) records what shipped to the site and measures it against Search Console 14 and 28 days later. It is free; the project's Change Log page (under My Site) shows the same records.
 - Local files are for file work: GSC CSVs, crawls, and drafts.
 - Reports are where finished work lives: each workflow saves its deliverable to the project's Reports page as an HTML page anyone on the team can open and print. Before starting a workflow, call `list_reports` to see what already exists and point the user at it instead of re-running research they already paid for.
 

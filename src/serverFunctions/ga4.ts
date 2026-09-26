@@ -5,6 +5,7 @@ import { z } from "zod";
 import { shiftGa4Date } from "@/server/features/ga4/services/Ga4Dates";
 import { Ga4OrganicOverviewService } from "@/server/features/ga4/services/Ga4OrganicOverviewService";
 import { Ga4Service } from "@/server/features/ga4/services/Ga4Service";
+import { SeoChangeService } from "@/server/features/seo-changes/services/SeoChangeService";
 import { AppError } from "@/server/lib/errors";
 import { Ga4ReportError } from "@/server/lib/ga4Errors";
 import { hasSelfHostedGoogleOAuthConfig } from "@/server/features/google/oauth-config";
@@ -106,13 +107,16 @@ export const getGa4DashboardReport = createServerFn({ method: "POST" })
         engagementRate: overviewMetric(row, "engagementRate"),
         keyEvents: overviewMetric(row, "keyEvents"),
       });
+      const range = overview.request.resolvedDateRange;
       return {
         connected: true as const,
         totals: totals(overview.current),
         prevTotals: totals(overview.previous),
-        trend: fillDailySessions(
-          overview.trend,
-          overview.request.resolvedDateRange,
+        trend: fillDailySessions(overview.trend, range),
+        changeMarkers: await SeoChangeService.listChangeMarkers(
+          context.projectId,
+          range.startDate,
+          range.endDate,
         ),
       };
     } catch (error) {

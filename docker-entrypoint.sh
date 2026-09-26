@@ -36,4 +36,4 @@ else
   printf '%s' "$FINGERPRINT" > "$FP_FILE"
 fi
 
-exec pnpm exec vite preview --host 0.0.0.0 --port "${PORT:-3001}"
+exec pnpm exec vite preview --host 0.0.0.0 --port "${PORT:-8741}"

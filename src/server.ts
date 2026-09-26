@@ -8,6 +8,7 @@ import { ProjectRepository } from "@/server/features/projects/repositories/Proje
 import { SamSessionRepository } from "@/server/features/sam/SamSessionRepository";
 import { runScheduledRankChecks } from "@/server/features/rank-tracking/services/scheduledRankChecks";
 import { reconcileStaleAudits } from "@/server/features/audit/services/auditReconciler";
+import { runDueChangeMeasurements } from "@/server/features/seo-changes/services/SeoChangeMeasurementService";
 import { getOrCreateOrganizationCustomer } from "@/server/billing/subscription";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 import { getAuthMode, isHostedAuthMode } from "@/lib/auth-mode";
@@ -228,8 +229,19 @@ export default {
       watchdogError = err;
       console.error("[cron] Stale-audit reconcile failed:", err);
     }
+    // SEO change log checkpoints whose window has settled in Search Console.
+    // Usually a single indexed read that finds nothing; held like the
+    // watchdog so it can't suppress the rank checks.
+    let changeMeasurementError: unknown;
+    try {
+      await withPgClient(() => runDueChangeMeasurements());
+    } catch (err) {
+      changeMeasurementError = err;
+      console.error("[cron] SEO change measurements failed:", err);
+    }
     // Scope a per-request Postgres client for the cron run (no-op in D1 mode).
     await withPgClient(() => runScheduledRankChecks(env));
     if (watchdogError) throw watchdogError;
+    if (changeMeasurementError) throw changeMeasurementError;
   },
 };

@@ -47,7 +47,7 @@ and add an authorized redirect URI matching the deployment origin plus
 | Deployment   | Redirect URI                                                 |
 | ------------ | ------------------------------------------------------------ |
 | Deployed     | `https://your-openseo-domain.com/api/youtube/oauth/callback` |
-| Local Docker | `http://localhost:3001/api/youtube/oauth/callback`           |
+| Local Docker | `http://localhost:8741/api/youtube/oauth/callback`           |
 
 Keep the existing `/api/gsc/oauth/callback` and `/api/ga4/oauth/callback` URIs
 if those integrations use the same client.

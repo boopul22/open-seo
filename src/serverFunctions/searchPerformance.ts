@@ -12,8 +12,10 @@ import {
   buildStrikingDistanceRows,
   previousPeriod,
   sumSearchTotals,
+  toDailyRows,
   toDimensionRows,
 } from "@/server/features/gsc/searchPerformanceReport";
+import { SeoChangeService } from "@/server/features/seo-changes/services/SeoChangeService";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 import {
   searchPerformanceInputSchema,
@@ -74,40 +76,42 @@ export const getSearchPerformanceReport = createServerFn({ method: "POST" })
     const { deviceFilters, filters } = buildGscFilters(data);
 
     try {
-      const [current, previous, queryPages, countries] = await Promise.all([
-        GscService.getPerformance({
-          projectId,
-          startDate,
-          endDate,
-          dimensions: ["date"],
-          filters,
-          rowLimit: DAILY_ROW_LIMIT,
-        }),
-        GscService.getPerformance({
-          projectId,
-          startDate: prev.startDate,
-          endDate: prev.endDate,
-          dimensions: ["date"],
-          filters,
-          rowLimit: DAILY_ROW_LIMIT,
-        }),
-        GscService.getPerformance({
-          projectId,
-          startDate,
-          endDate,
-          dimensions: ["query", "page"],
-          filters,
-          rowLimit: STRIKING_DISTANCE_FETCH_LIMIT,
-        }),
-        GscService.getPerformance({
-          projectId,
-          startDate,
-          endDate,
-          dimensions: ["country"],
-          filters: deviceFilters,
-          rowLimit: COUNTRY_ROW_LIMIT,
-        }),
-      ]);
+      const [current, previous, queryPages, countries, changeMarkers] =
+        await Promise.all([
+          GscService.getPerformance({
+            projectId,
+            startDate,
+            endDate,
+            dimensions: ["date"],
+            filters,
+            rowLimit: DAILY_ROW_LIMIT,
+          }),
+          GscService.getPerformance({
+            projectId,
+            startDate: prev.startDate,
+            endDate: prev.endDate,
+            dimensions: ["date"],
+            filters,
+            rowLimit: DAILY_ROW_LIMIT,
+          }),
+          GscService.getPerformance({
+            projectId,
+            startDate,
+            endDate,
+            dimensions: ["query", "page"],
+            filters,
+            rowLimit: STRIKING_DISTANCE_FETCH_LIMIT,
+          }),
+          GscService.getPerformance({
+            projectId,
+            startDate,
+            endDate,
+            dimensions: ["country"],
+            filters: deviceFilters,
+            rowLimit: COUNTRY_ROW_LIMIT,
+          }),
+          SeoChangeService.listChangeMarkers(projectId, startDate, endDate),
+        ]);
 
       return {
         connected: true as const,
@@ -118,6 +122,8 @@ export const getSearchPerformanceReport = createServerFn({ method: "POST" })
           prevEndDate: prev.endDate,
         },
         totals: sumSearchTotals(current.rows),
+        daily: toDailyRows(current.rows),
+        changeMarkers,
         prevTotals: sumSearchTotals(previous.rows),
         strikingDistance: buildStrikingDistanceRows(queryPages.rows),
         countries: toDimensionRows(countries.rows),

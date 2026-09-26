@@ -302,6 +302,10 @@ async function buildInventory(db: Db, user: UserRow) {
       schema.reportTemplates,
       eq(schema.reportTemplates.createdByUserId, user.id),
     ),
+    attributed_seo_changes: await db.$count(
+      schema.seoChanges,
+      eq(schema.seoChanges.createdByUserId, user.id),
+    ),
     shared_reports: await db.$count(
       schema.reports,
       and(
@@ -527,6 +531,21 @@ async function erasePostgres(db: Db, user: UserRow, organizationIds: string[]) {
       .update(schema.reportTemplates)
       .set({ createdByUserId: "gdpr-deleted-user" })
       .where(eq(schema.reportTemplates.createdByUserId, user.id));
+    // Same for the change log. A change they logged in the app carries their
+    // display name as `author`, so that goes too; an agent's label stays.
+    await tx
+      .update(schema.seoChanges)
+      .set({ author: "Deleted user" })
+      .where(
+        and(
+          eq(schema.seoChanges.createdByUserId, user.id),
+          eq(schema.seoChanges.authorKind, "user"),
+        ),
+      );
+    await tx
+      .update(schema.seoChanges)
+      .set({ createdByUserId: "gdpr-deleted-user" })
+      .where(eq(schema.seoChanges.createdByUserId, user.id));
     if (organizationIds.length > 0) {
       // Re-assert the solo-membership guard at delete time: anyone who
       // accepted an invite after the inventory was taken must abort the
