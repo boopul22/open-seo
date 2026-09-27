@@ -1,6 +1,9 @@
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
 import { AuditScheduleRepository } from "@/server/features/audit/repositories/AuditScheduleRepository";
-import { AUDIT_LIMITS } from "@/server/features/audit/services/audit-capacity";
+import {
+  AUDIT_LIMITS,
+  type AuditLimitTier,
+} from "@/server/features/audit/services/audit-capacity";
 import { AuditService } from "@/server/features/audit/services/AuditService";
 import { PageSpeedSweepService } from "@/server/features/pagespeed/services/PageSpeedSweepService";
 import { AppError } from "@/server/lib/errors";
@@ -62,9 +65,9 @@ export async function runScheduledAudits() {
         projectId: schedule.projectId,
       };
       let auditId: string;
+      let limitTier: AuditLimitTier;
       try {
-        const limitTier =
-          await AuditService.resolveAuditLimitTier(billingCustomer);
+        limitTier = await AuditService.resolveAuditLimitTier(billingCustomer);
         // Keep the last two scheduled audits: drop the one before last so
         // the schedule never grows the org's audit capacity.
         if (schedule.previousAuditId) {
@@ -98,12 +101,6 @@ export async function runScheduledAudits() {
         continue;
       }
 
-      // Every sitemap URL gets a mobile PageSpeed run alongside the crawl;
-      // the cron starts queued sweeps a few at a time.
-      await PageSpeedSweepService.queueSweep(
-        schedule.projectId,
-        schedule.startUrl,
-      );
       await AuditScheduleRepository.recordRun({
         id: schedule.id,
         lastRunAt: now.toISOString(),
@@ -111,6 +108,21 @@ export async function runScheduledAudits() {
         previousAuditId: last ? last.id : null,
       });
       summary.started++;
+      // Every sitemap URL gets a mobile PageSpeed run alongside the crawl (the
+      // cron starts queued sweeps a few at a time). Sweeps spend the shared
+      // PageSpeed key, so the free tier skips them. Non-fatal: the audit has
+      // already started and been recorded.
+      if (limitTier !== "free") {
+        await PageSpeedSweepService.queueSweep(
+          schedule.projectId,
+          schedule.startUrl,
+        ).catch((error: unknown) => {
+          console.error(
+            `[cron] PageSpeed sweep for schedule ${schedule.id} failed to queue:`,
+            error,
+          );
+        });
+      }
     } catch (error) {
       summary.errors++;
       await AuditScheduleRepository.recordSkip(

@@ -100,13 +100,16 @@ async function listSweepsByStatus(status: PageSpeedSweepStatus, limit: number) {
   });
 }
 
-/** Quota-paused sweeps whose reset time has passed. */
-async function listResumableSweeps(nowIso: string) {
+/** Quota-paused sweeps whose reset time has passed, oldest first. */
+async function listResumableSweeps(nowIso: string, limit: number) {
+  if (limit <= 0) return [];
   return db.query.pagespeedSweeps.findMany({
     where: and(
       eq(pagespeedSweeps.status, "waiting_quota"),
       lte(pagespeedSweeps.resumeAt, nowIso),
     ),
+    orderBy: asc(pagespeedSweeps.createdAt),
+    limit,
   });
 }
 

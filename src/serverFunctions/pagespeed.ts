@@ -1,14 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { AuditScheduleRepository } from "@/server/features/audit/repositories/AuditScheduleRepository";
 import {
   PAGESPEED_URL_SORTS,
   PageSpeedReportService,
 } from "@/server/features/pagespeed/services/PageSpeedReportService";
 import { PageSpeedSweepService } from "@/server/features/pagespeed/services/PageSpeedSweepService";
-import { ProjectRepository } from "@/server/features/projects/repositories/ProjectRepository";
-import { normalizeAndValidateStartUrl } from "@/server/lib/audit/url-policy";
-import { AppError } from "@/server/lib/errors";
+import { captureServerEvent } from "@/server/lib/posthog";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 
 // Sitemap-wide PageSpeed results for the app. `projectId` in each validator
@@ -50,18 +47,15 @@ export const runPageSpeedSweep = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .validator(projectScoped)
   .handler(async ({ context }) => {
-    const startUrl =
-      (await AuditScheduleRepository.getForProject(context.projectId))
-        ?.startUrl ??
-      (await ProjectRepository.getProjectById(context.projectId))?.domain;
-    if (!startUrl) {
-      throw new AppError(
-        "VALIDATION_ERROR",
-        "Add the site's domain to this project first.",
-      );
-    }
-    return PageSpeedSweepService.queueSweep(
+    const result = await PageSpeedSweepService.queueSweepForProject(
       context.projectId,
-      await normalizeAndValidateStartUrl(startUrl),
+      context.organizationId,
     );
+    await captureServerEvent({
+      distinctId: context.userId,
+      event: "pagespeed:sweep_start",
+      organizationId: context.organizationId,
+      properties: { project_id: context.projectId, created: result.created },
+    });
+    return result;
   });

@@ -4,9 +4,12 @@
 // Google allows 25,000/day; reserve under it so the ad-hoc
 // get_pagespeed_insights tool keeps headroom on the same key.
 export const PAGESPEED_DAILY_BUDGET = 24_000;
-// Google allows 240/min; stay well under it across concurrent sweeps.
-export const PAGESPEED_MINUTE_BUDGET = 200;
+// Google allows 240/min per key. Each sweep workflow tracks its own window,
+// so split the budget across the concurrent sweeps.
 export const PAGESPEED_MAX_CONCURRENT_SWEEPS = 3;
+export const PAGESPEED_MINUTE_BUDGET = Math.floor(
+  200 / PAGESPEED_MAX_CONCURRENT_SWEEPS,
+);
 export const PAGESPEED_BATCH_SIZE = 24;
 export const PAGESPEED_BATCH_CONCURRENCY = 4;
 export const PAGESPEED_MAX_URLS = 50_000;

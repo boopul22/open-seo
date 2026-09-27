@@ -1,19 +1,14 @@
 import { sort } from "remeda";
 import { z } from "zod";
 import {
-  PAGESPEED_API_KEY_ENV,
+  getPageSpeedApiKey,
   PageSpeedApiError,
   runPageSpeedInsights,
 } from "@/server/lib/pagespeedClient";
-import { CRUX_API_KEY_ENV } from "@/server/lib/cruxClient";
-import { getOptionalEnvValue } from "@/server/lib/runtime-env";
 import { mcpResponse } from "@/server/mcp/formatters";
 import { optionalMetaOutputSchema } from "@/server/mcp/output-schemas";
-import { AuditScheduleRepository } from "@/server/features/audit/repositories/AuditScheduleRepository";
 import { PageSpeedReportService } from "@/server/features/pagespeed/services/PageSpeedReportService";
 import { PageSpeedSweepService } from "@/server/features/pagespeed/services/PageSpeedSweepService";
-import { normalizeAndValidateStartUrl } from "@/server/lib/audit/url-policy";
-import { AppError } from "@/server/lib/errors";
 import { buildProjectMeta } from "@/server/mcp/context";
 import { withMcpProjectAuth } from "@/server/mcp/project-auth";
 import { projectIdSchema } from "@/server/mcp/schemas";
@@ -58,10 +53,7 @@ export const getPageSpeedInsightsTool = {
     },
   },
   handler: async (args: z.infer<z.ZodObject<typeof inputSchema>>) => {
-    // One Google Cloud key can enable both the PageSpeed and CrUX APIs.
-    const apiKey =
-      (await getOptionalEnvValue(PAGESPEED_API_KEY_ENV)) ??
-      (await getOptionalEnvValue(CRUX_API_KEY_ENV));
+    const apiKey = await getPageSpeedApiKey();
     let result: Awaited<ReturnType<typeof runPageSpeedInsights>>;
     try {
       result = await runPageSpeedInsights({ ...args, apiKey });
@@ -313,7 +305,7 @@ export const runPageSpeedSweepTool = {
   config: {
     title: "Run sitemap PageSpeed sweep",
     description:
-      "Queue a PageSpeed sweep now: every sitemap URL of the project's site gets a mobile PageSpeed Insights test, paced under Google's quota. It normally runs with the weekly site audit; use this for an on-demand refresh. Starts within the hour; read progress and results with get_pagespeed_report. Free, no credits.",
+      "Queue a PageSpeed sweep now: every sitemap URL of the project's site gets a mobile PageSpeed Insights test, paced under Google's quota. It normally runs with the weekly site audit; use this for an on-demand refresh. Starts within the hour; read progress and results with get_pagespeed_report. Uses no credits; on hosted OpenSEO it needs a paid plan.",
     inputSchema: runInputSchema,
     outputSchema: z
       .object({
@@ -330,23 +322,14 @@ export const runPageSpeedSweepTool = {
   },
   handler: withMcpProjectAuth(
     async (args: z.infer<z.ZodObject<typeof runInputSchema>>, context) => {
-      const startUrl =
-        (await AuditScheduleRepository.getForProject(args.projectId))
-          ?.startUrl ?? context.project.domain;
-      if (!startUrl) {
-        throw new AppError(
-          "VALIDATION_ERROR",
-          "This project has no domain to read a sitemap from.",
+      const { created, sweepId, startUrl } =
+        await PageSpeedSweepService.queueSweepForProject(
+          args.projectId,
+          context.auth.organizationId,
         );
-      }
-      const normalized = await normalizeAndValidateStartUrl(startUrl);
-      const { sweepId, created } = await PageSpeedSweepService.queueSweep(
-        args.projectId,
-        normalized,
-      );
       return mcpResponse({
         text: created
-          ? `PageSpeed sweep queued for ${normalized}. It starts within the hour; check get_pagespeed_report for progress.`
+          ? `PageSpeed sweep queued for ${startUrl}. It starts within the hour; check get_pagespeed_report for progress.`
           : "A PageSpeed sweep is already queued or running for this project; check get_pagespeed_report for progress.",
         meta: buildProjectMeta(
           context,

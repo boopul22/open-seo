@@ -51,6 +51,7 @@ beforeEach(() => {
   mocks.resolveAuditLimitTier.mockResolvedValue("free");
   mocks.remove.mockResolvedValue(undefined);
   mocks.startAudit.mockResolvedValue({ auditId: "audit_new" });
+  mocks.queueSweep.mockResolvedValue({ sweepId: "sweep_1", created: true });
 });
 
 describe("runScheduledAudits", () => {
@@ -61,15 +62,24 @@ describe("runScheduledAudits", () => {
     expect(mocks.startAudit).toHaveBeenCalledWith(
       expect.objectContaining({ maxPages: 50, lighthouseStrategy: "none" }),
     );
-    expect(mocks.queueSweep).toHaveBeenCalledWith(
-      "project_1",
-      "https://example.com/",
-    );
     expect(mocks.recordRun).toHaveBeenCalledWith(
       expect.objectContaining({
         lastAuditId: "audit_new",
         previousAuditId: "audit_last",
       }),
+    );
+    // The shared PageSpeed key is kept for paid plans.
+    expect(mocks.queueSweep).not.toHaveBeenCalled();
+  });
+
+  it("queues a sitemap PageSpeed sweep on a paid plan", async () => {
+    mocks.resolveAuditLimitTier.mockResolvedValue("paid");
+
+    await runScheduledAudits();
+
+    expect(mocks.queueSweep).toHaveBeenCalledWith(
+      "project_1",
+      "https://example.com/",
     );
   });
 

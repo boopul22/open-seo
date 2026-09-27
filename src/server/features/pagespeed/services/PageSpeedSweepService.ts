@@ -11,14 +11,18 @@ import {
   type PageSpeedSweepRow,
 } from "@/server/features/pagespeed/repositories/PageSpeedRepository";
 import { listSitemapPageUrls } from "@/server/lib/audit/discovery";
-import { CRUX_API_KEY_ENV } from "@/server/lib/cruxClient";
 import {
+  getPageSpeedApiKey,
   isPageSpeedDailyQuotaError,
-  PAGESPEED_API_KEY_ENV,
   PageSpeedApiError,
   runPageSpeedInsights,
 } from "@/server/lib/pagespeedClient";
-import { getOptionalEnvValue } from "@/server/lib/runtime-env";
+import { customerHasPaidPlan } from "@/server/billing/subscription";
+import { AppError } from "@/server/lib/errors";
+import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
+import { AuditScheduleRepository } from "@/server/features/audit/repositories/AuditScheduleRepository";
+import { ProjectRepository } from "@/server/features/projects/repositories/ProjectRepository";
+import { normalizeAndValidateStartUrl } from "@/server/lib/audit/url-policy";
 import {
   PAGESPEED_BATCH_CONCURRENCY,
   PAGESPEED_BATCH_SIZE,
@@ -30,11 +34,11 @@ import {
 
 // Issues stored per page: the costliest failing audits.
 const MAX_ISSUES_PER_PAGE = 10;
-// A running sweep with no batch progress for this long lost its workflow. A
-// healthy batch refreshes the heartbeat every few minutes. Also catches
-// instances a local (Docker) restart left reporting "running" with nothing
-// executing them.
-const STALLED_SWEEP_MS = 15 * 60_000;
+// A running sweep with no batch progress for this long lost its workflow: a
+// batch step can take up to 3 attempts × 10 minutes plus backoff before the
+// heartbeat moves. Also catches instances a local (Docker) restart left
+// reporting "running" with nothing executing them.
+const STALLED_SWEEP_MS = 35 * 60_000;
 const RATE_LIMIT_BACKOFF_MS = 65_000;
 
 type PageSpeedBatchOutcome =
@@ -43,15 +47,18 @@ type PageSpeedBatchOutcome =
   | { state: "rate_limited"; processed: number; waitMs: number }
   | { state: "quota"; resumeAt: string };
 
-async function getApiKey() {
-  // One Google Cloud key can enable both the PageSpeed and CrUX APIs.
-  return (
-    (await getOptionalEnvValue(PAGESPEED_API_KEY_ENV)) ??
-    (await getOptionalEnvValue(CRUX_API_KEY_ENV))
+// ─── Scheduling ──────────────────────────────────────────────────────────────
+
+/** Sweeps spend the server's one shared PageSpeed key, so hosted mode keeps
+ *  them to paid plans. Self-hosted runs unrestricted. */
+async function requirePageSpeedSweepAccess(organizationId: string) {
+  if (!(await isHostedServerAuthMode())) return;
+  if (await customerHasPaidPlan(organizationId)) return;
+  throw new AppError(
+    "PAYMENT_REQUIRED",
+    "Upgrade to a paid plan to run sitemap-wide PageSpeed sweeps",
   );
 }
-
-// ─── Scheduling ──────────────────────────────────────────────────────────────
 
 /** Queue a sweep for a project unless one is already queued or running. The
  *  hourly cron starts it (at most PAGESPEED_MAX_CONCURRENT_SWEEPS at once). */
@@ -60,6 +67,23 @@ async function queueSweep(projectId: string, startUrl: string) {
   if (active) return { sweepId: active.id, created: false };
   const sweepId = await PageSpeedRepository.createSweep(projectId, startUrl);
   return { sweepId, created: true };
+}
+
+/** On-demand sweep (app button, MCP tool): the weekly schedule's start URL,
+ *  else the project's domain. */
+async function queueSweepForProject(projectId: string, organizationId: string) {
+  await requirePageSpeedSweepAccess(organizationId);
+  const startUrl =
+    (await AuditScheduleRepository.getForProject(projectId))?.startUrl ??
+    (await ProjectRepository.getProjectById(projectId))?.domain;
+  if (!startUrl) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "Add the site's domain to this project first.",
+    );
+  }
+  const normalized = await normalizeAndValidateStartUrl(startUrl);
+  return { ...(await queueSweep(projectId, normalized)), startUrl: normalized };
 }
 
 async function launch(sweep: PageSpeedSweepRow, now: Date) {
@@ -112,14 +136,15 @@ async function sweepsWithDeadInstances() {
   return dead;
 }
 
-/** Cron body: relaunch quota-paused and stalled sweeps, then start queued
- *  ones while fewer than the concurrency cap are running. */
+/** Cron body: relaunch stalled and dead sweeps, resume quota-paused ones,
+ *  then start queued ones, keeping at most PAGESPEED_MAX_CONCURRENT_SWEEPS
+ *  running or waiting on the quota. */
 async function startQueuedSweeps(now = new Date()) {
   const stalledBefore = new Date(
     now.getTime() - STALLED_SWEEP_MS,
   ).toISOString();
+  // Already counted as running, so relaunching them adds no load.
   const candidates = [
-    ...(await PageSpeedRepository.listResumableSweeps(now.toISOString())),
     ...(await PageSpeedRepository.listStalledSweeps(stalledBefore)),
     ...(await sweepsWithDeadInstances()),
   ];
@@ -127,11 +152,28 @@ async function startQueuedSweeps(now = new Date()) {
   for (const sweep of relaunch) await launch(sweep, now);
 
   const running = await PageSpeedRepository.countSweepsByStatus(["running"]);
-  const slots = PAGESPEED_MAX_CONCURRENT_SWEEPS - running;
-  if (slots <= 0) return { relaunched: relaunch.length, started: 0 };
-  const queued = await PageSpeedRepository.listSweepsByStatus("queued", slots);
+  const resumable = await PageSpeedRepository.listResumableSweeps(
+    now.toISOString(),
+    Math.max(PAGESPEED_MAX_CONCURRENT_SWEEPS - running, 0),
+  );
+  for (const sweep of resumable) await launch(sweep, now);
+
+  // Quota-paused sweeps hold their slot, so new sweeps don't start only to
+  // pause on the same spent quota.
+  const occupied = await PageSpeedRepository.countSweepsByStatus([
+    "running",
+    "waiting_quota",
+  ]);
+  const slots = PAGESPEED_MAX_CONCURRENT_SWEEPS - occupied;
+  const queued =
+    slots > 0
+      ? await PageSpeedRepository.listSweepsByStatus("queued", slots)
+      : [];
   for (const sweep of queued) await launch(sweep, now);
-  return { relaunched: relaunch.length, started: queued.length };
+  return {
+    relaunched: relaunch.length + resumable.length,
+    started: queued.length,
+  };
 }
 
 // ─── Workflow steps ──────────────────────────────────────────────────────────
@@ -273,7 +315,7 @@ async function processBatch(
 
   // Reserve quota up front so concurrent sweeps on the same key see it.
   await PageSpeedRepository.addUsage(day, pending.length);
-  const apiKey = await getApiKey();
+  const apiKey = await getPageSpeedApiKey();
   let hitDailyQuota = false;
   let hitRateLimit = false;
   let processed = 0;
@@ -308,6 +350,11 @@ async function processBatch(
   await Promise.all(
     Array.from({ length: PAGESPEED_BATCH_CONCURRENCY }, worker),
   );
+  // Give back the reservation for pages left pending by a rate limit. On the
+  // daily-quota path usage is pinned to the budget instead.
+  if (!hitDailyQuota && processed < pending.length) {
+    await PageSpeedRepository.addUsage(day, processed - pending.length);
+  }
   await refreshCounts(sweepId);
 
   if (hitDailyQuota) {
@@ -341,6 +388,7 @@ async function failSweep(sweepId: string, error: unknown) {
 
 export const PageSpeedSweepService = {
   queueSweep,
+  queueSweepForProject,
   startQueuedSweeps,
   prepareSweep,
   processBatch,
