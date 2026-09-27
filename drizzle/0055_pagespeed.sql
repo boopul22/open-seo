@@ -59,6 +59,7 @@ CREATE TABLE `pagespeed_sweeps` (
 --> statement-breakpoint
 CREATE INDEX `pagespeed_sweeps_project_idx` ON `pagespeed_sweeps` (`project_id`);--> statement-breakpoint
 CREATE INDEX `pagespeed_sweeps_status_idx` ON `pagespeed_sweeps` (`status`);--> statement-breakpoint
+CREATE UNIQUE INDEX `pagespeed_sweeps_one_active_per_project_idx` ON `pagespeed_sweeps` (`project_id`) WHERE "pagespeed_sweeps"."status" IN ('queued', 'running', 'waiting_quota');--> statement-breakpoint
 CREATE TABLE `pagespeed_usage` (
 	`day` text PRIMARY KEY NOT NULL,
 	`used` integer DEFAULT 0 NOT NULL

@@ -1,5 +1,5 @@
 {
-  "id": "8db4bc8e-b78c-4b95-890b-a63612655dcf",
+  "id": "e886c194-5d26-46d3-bd56-e971f026ff23",
   "prevId": "f947085c-f651-4c2c-924f-a821f27a4ac1",
   "version": "7",
   "dialect": "postgresql",
@@ -7162,6 +7162,22 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "pagespeed_sweeps_one_active_per_project_idx": {
+          "name": "pagespeed_sweeps_one_active_per_project_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"pagespeed_sweeps\".\"status\" IN ('queued', 'running', 'waiting_quota')",
           "concurrently": false,
           "method": "btree",
           "with": {}

@@ -49,6 +49,11 @@ export const pagespeedSweeps = sqliteTable(
   (table) => [
     index("pagespeed_sweeps_project_idx").on(table.projectId),
     index("pagespeed_sweeps_status_idx").on(table.status),
+    // One active sweep per project: concurrent queue calls (weekly audit, app
+    // button, MCP) can't start duplicates on the shared key.
+    uniqueIndex("pagespeed_sweeps_one_active_per_project_idx")
+      .on(table.projectId)
+      .where(sql`${table.status} IN ('queued', 'running', 'waiting_quota')`),
   ],
 );
 

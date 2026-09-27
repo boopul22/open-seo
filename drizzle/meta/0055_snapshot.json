@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "9dd5bfed-25ef-4874-9c69-6bc872e20751",
+  "id": "8d32fb89-0e7d-4dff-9f5d-e7d9d281d772",
   "prevId": "f54e87e9-7bc1-4fff-8b8e-87a0be6b1aaa",
   "tables": {
     "backlink_snapshots": {
@@ -6535,6 +6535,14 @@
             "status"
           ],
           "isUnique": false
+        },
+        "pagespeed_sweeps_one_active_per_project_idx": {
+          "name": "pagespeed_sweeps_one_active_per_project_idx",
+          "columns": [
+            "project_id"
+          ],
+          "isUnique": true,
+          "where": "\"pagespeed_sweeps\".\"status\" IN ('queued', 'running', 'waiting_quota')"
         }
       },
       "foreignKeys": {

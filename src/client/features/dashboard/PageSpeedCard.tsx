@@ -51,6 +51,15 @@ export function PageSpeedCard({ projectId }: { projectId: string }) {
       </CardShell>
     );
   }
+  if (query.isError) {
+    return (
+      <CardShell title="PageSpeed" action={details}>
+        <p className="text-sm text-base-content/60">
+          Couldn&rsquo;t load PageSpeed data. Try again shortly.
+        </p>
+      </CardShell>
+    );
+  }
   if (!overview?.summary || !overview.sweep) {
     return (
       <CardShell title="PageSpeed" action={details}>

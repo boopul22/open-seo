@@ -63,4 +63,5 @@ CREATE INDEX "pagespeed_result_issues_audit_key_idx" ON "pagespeed_result_issues
 CREATE UNIQUE INDEX "pagespeed_results_sweep_url_idx" ON "pagespeed_results" USING btree ("sweep_id","url");--> statement-breakpoint
 CREATE INDEX "pagespeed_results_sweep_status_idx" ON "pagespeed_results" USING btree ("sweep_id","status");--> statement-breakpoint
 CREATE INDEX "pagespeed_sweeps_project_idx" ON "pagespeed_sweeps" USING btree ("project_id");--> statement-breakpoint
-CREATE INDEX "pagespeed_sweeps_status_idx" ON "pagespeed_sweeps" USING btree ("status");
+CREATE INDEX "pagespeed_sweeps_status_idx" ON "pagespeed_sweeps" USING btree ("status");--> statement-breakpoint
+CREATE UNIQUE INDEX "pagespeed_sweeps_one_active_per_project_idx" ON "pagespeed_sweeps" USING btree ("project_id") WHERE "pagespeed_sweeps"."status" IN ('queued', 'running', 'waiting_quota');

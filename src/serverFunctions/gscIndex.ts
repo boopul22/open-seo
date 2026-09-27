@@ -10,6 +10,7 @@ import { CruxService } from "@/server/features/gsc/services/CruxService";
 import { CruxNotConfiguredError } from "@/server/lib/cruxClient";
 import { captureServerEvent } from "@/server/lib/posthog";
 import { requireOrgPermission } from "@/server/auth/org-gate";
+import { AppError } from "@/server/lib/errors";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 import { CRUX_FORM_FACTORS } from "@/shared/core-web-vitals";
 
@@ -58,9 +59,10 @@ export const refreshIndexingSitemaps = createServerFn({ method: "POST" })
       });
     } catch (error) {
       if (isNotConnected(error))
-        throw new Error("Reconnect Search Console to refresh sitemaps.", {
-          cause: error,
-        });
+        throw new AppError(
+          "FORBIDDEN",
+          "Reconnect Search Console to refresh sitemaps.",
+        );
       throw error;
     }
   });
@@ -130,7 +132,8 @@ export const writeIndexingSitemap = createServerFn({ method: "POST" })
     requireOrgPermission(context, { integration: ["manage"] });
     const { connection } = await GscService.getProjectClient(context.projectId);
     if (!(await GscService.connectionCanWrite(connection))) {
-      throw new Error(
+      throw new AppError(
+        "FORBIDDEN",
         "Enable sitemap management first; this connection is read-only.",
       );
     }

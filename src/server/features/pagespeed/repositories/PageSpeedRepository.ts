@@ -41,12 +41,18 @@ const ACTIVE_STATUSES: PageSpeedSweepStatus[] = [
 
 // ─── Sweeps ──────────────────────────────────────────────────────────────────
 
+/** Insert a queued sweep, or return the project's active one; the partial
+ *  unique index makes concurrent callers converge on a single sweep. */
 async function createSweep(projectId: string, startUrl: string) {
-  const id = crypto.randomUUID();
-  await db
+  const [inserted] = await db
     .insert(pagespeedSweeps)
-    .values({ id, projectId, startUrl, status: "queued" });
-  return id;
+    .values({ id: crypto.randomUUID(), projectId, startUrl, status: "queued" })
+    .onConflictDoNothing()
+    .returning({ id: pagespeedSweeps.id });
+  if (inserted) return { sweepId: inserted.id, created: true };
+  const active = await getActiveSweep(projectId);
+  if (!active) throw new Error("Failed to create or find a PageSpeed sweep");
+  return { sweepId: active.id, created: false };
 }
 
 async function getSweep(id: string) {

@@ -63,10 +63,7 @@ async function requirePageSpeedSweepAccess(organizationId: string) {
 /** Queue a sweep for a project unless one is already queued or running. The
  *  hourly cron starts it (at most PAGESPEED_MAX_CONCURRENT_SWEEPS at once). */
 async function queueSweep(projectId: string, startUrl: string) {
-  const active = await PageSpeedRepository.getActiveSweep(projectId);
-  if (active) return { sweepId: active.id, created: false };
-  const sweepId = await PageSpeedRepository.createSweep(projectId, startUrl);
-  return { sweepId, created: true };
+  return PageSpeedRepository.createSweep(projectId, startUrl);
 }
 
 /** On-demand sweep (app button, MCP tool): the weekly schedule's start URL,
