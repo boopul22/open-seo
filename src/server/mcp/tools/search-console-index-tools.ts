@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+import { hasOrgPermission } from "@/lib/org-permissions";
 import { z } from "zod";
 import { buildProjectMeta, type ToolContext } from "@/server/mcp/context";
 import { mcpResponse } from "@/server/mcp/formatters";
@@ -265,9 +266,18 @@ function sitemapWriteTool(kind: "submit" | "delete") {
   return gscTool(
     async (
       args: z.infer<z.ZodObject<typeof sitemapWriteInput>>,
-      _context,
+      context,
       meta,
     ) => {
+      // Same gate as the app's sitemap controls: changing a property's
+      // sitemaps is an integration-management action.
+      if (!hasOrgPermission(context.auth.role, { integration: ["manage"] })) {
+        return mcpResponse({
+          text: "Your role in this organization can't manage integrations, so it can't submit or delete sitemaps. Ask an owner or admin.",
+          meta,
+          structuredContent: { ok: false, reason: "forbidden" },
+        });
+      }
       const { connection } = await GscService.getProjectClient(args.projectId);
       if (!(await GscService.connectionCanWrite(connection))) {
         return mcpResponse({

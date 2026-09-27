@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+import { isCrawlableUrl } from "@/server/lib/audit/url-policy";
 import { sort } from "remeda";
 import { env } from "cloudflare:workers";
 import { fetchSitemapDocumentWithRetry } from "@/server/lib/audit/discovery";
@@ -152,6 +153,9 @@ async function expandSitemapUrls(sitemapPaths: string[]): Promise<Set<string>> {
     const path = queue.shift();
     if (!path || seen.has(path)) continue;
     seen.add(path);
+    // Nested sitemap locations come from the site's own XML; keep them to
+    // public hosts, the same policy the crawler applies.
+    if (!isCrawlableUrl(path)) continue;
     const doc = await fetchSitemapDocumentWithRetry(path);
     for (const nested of doc.nestedSitemaps) queue.push(nested);
     for (const url of doc.pageUrls) {
