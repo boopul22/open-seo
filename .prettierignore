@@ -11,6 +11,8 @@ routeTree.gen.ts
 # real copies synced from .agents/skills/ via `pnpm sync-plugin-skills` — must
 # stay byte-identical to the canonical source, not reformatted
 plugins/openseo/skills/
+# third-party playbooks vendored verbatim from claude-seo (MIT); keep upstream bytes
+src/server/mcp/playbooks/
 dist/
 drizzle/
 drizzle-pg/

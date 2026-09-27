@@ -13,6 +13,7 @@ import { TablePagination } from "@/client/components/table/TablePagination";
 import { SearchConsoleConnectionCard } from "@/client/features/gsc/SearchConsoleConnectionCard";
 import { SearchPerformanceLoadingState } from "@/client/features/search-performance/SearchPerformanceLoadingState";
 import { SearchTrendChart } from "@/client/features/search-performance/SearchTrendChart";
+import { CoreWebVitalsPanel } from "@/client/features/search-performance/CoreWebVitalsPanel";
 import {
   DimensionTable,
   exportDimensionRows,
@@ -352,6 +353,7 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                 </>
               )}
             </div>
+            <CoreWebVitalsPanel projectId={projectId} />
           </>
         )}
       </div>

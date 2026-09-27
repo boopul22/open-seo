@@ -3,7 +3,9 @@ import {
   Bot,
   Brain,
   ClipboardCheck,
+  FileSearch,
   FileText,
+  Gauge,
   GitCommitHorizontal,
   Globe,
   LayoutDashboard,
@@ -47,6 +49,11 @@ const projectNavItems = [
     icon: GoogleGlyphMuted,
   },
   {
+    to: "/p/$projectId/indexing" as const,
+    label: "Indexing",
+    icon: FileSearch,
+  },
+  {
     to: "/p/$projectId/changes" as const,
     label: "Change Log",
     icon: GitCommitHorizontal,
@@ -65,6 +72,11 @@ const projectNavItems = [
     to: "/p/$projectId/audit" as const,
     label: "Site Audit",
     icon: ClipboardCheck,
+  },
+  {
+    to: "/p/$projectId/pagespeed" as const,
+    label: "PageSpeed",
+    icon: Gauge,
   },
   {
     to: "/p/$projectId/brand-lookup" as const,
@@ -145,10 +157,12 @@ export function getProjectNavGroups(projectId: string) {
       label: "My Site",
       items: [
         byPath("/p/$projectId/search-performance"),
+        byPath("/p/$projectId/indexing"),
         byPath("/p/$projectId/changes"),
         byPath("/p/$projectId/rank-tracking"),
         byPath("/p/$projectId/saved"),
         byPath("/p/$projectId/audit"),
+        byPath("/p/$projectId/pagespeed"),
       ],
     },
     {

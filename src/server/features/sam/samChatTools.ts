@@ -58,6 +58,16 @@ import {
   getSearchConsolePerformanceTool,
   inspectUrlsTool,
 } from "@/server/mcp/tools/search-console-tools";
+import {
+  getCoreWebVitalsTool,
+  getIndexCoverageTool,
+  getRichResultIssuesTool,
+  getSearchConsoleHealthTool,
+  getSitemapsTool,
+  listIndexIssuesTool,
+  listIndexedUrlsTool,
+  startIndexSweepTool,
+} from "@/server/mcp/tools/search-console-index-tools";
 import { whoamiTool } from "@/server/mcp/tools/whoami";
 import { discoverSiteUrls, readPages, readSite } from "@/server/lib/scrape";
 import { capToolOutput } from "@/server/features/sam/samToolOutput";
@@ -392,6 +402,14 @@ export function buildSamMcpTools(
     get_keyword_metrics: adaptTool(getKeywordMetricsTool),
     get_search_console_performance: adaptTool(getSearchConsolePerformanceTool),
     inspect_urls: adaptTool(inspectUrlsTool),
+    get_search_console_health: adaptTool(getSearchConsoleHealthTool),
+    get_sitemaps: adaptTool(getSitemapsTool),
+    get_index_coverage: adaptTool(getIndexCoverageTool),
+    list_index_issues: adaptTool(listIndexIssuesTool),
+    list_indexed_urls: adaptTool(listIndexedUrlsTool),
+    get_rich_result_issues: adaptTool(getRichResultIssuesTool),
+    start_index_sweep: adaptTool(startIndexSweepTool),
+    get_core_web_vitals: adaptTool(getCoreWebVitalsTool),
     // Unconditional like the MCP server's registrations — the GA4 launch gate
     // was removed in #505.
     get_google_analytics_organic_landing_pages: adaptObjectTool(

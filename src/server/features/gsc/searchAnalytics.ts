@@ -7,6 +7,7 @@ export const GSC_DIMENSIONS = [
   "country",
   "device",
   "date",
+  "hour",
   "searchAppearance",
 ] as const;
 export const GSC_FILTER_OPERATORS = [
@@ -25,6 +26,14 @@ export const GSC_SEARCH_TYPES = [
   "googleNews",
   "discover",
 ] as const;
+export const GSC_AGGREGATION_TYPES = [
+  "auto",
+  "byPage",
+  "byProperty",
+  "byNewsShowcasePanel",
+] as const;
+// hourly_all is required for the `hour` dimension and returns hourly rows.
+export const GSC_DATA_STATES = ["final", "all", "hourly_all"] as const;
 export const GSC_DATE_RANGES = [
   "last_7_days",
   "last_28_days",
@@ -37,15 +46,19 @@ export const GSC_DATE_RANGES = [
 // 250 rows fits comfortably inside one MCP tool result; the agent opts into
 // more with `rowLimit` or paginates with `startRow`.
 export const GSC_DEFAULT_ROW_LIMIT = 250;
-// v1 caps rows-per-call at 1000 to protect the MCP context window. The GSC API
-// supports up to 25000, but we keep fetched == returned so counts stay honest;
-// the agent paginates with `startRow` for more.
-export const GSC_MAX_ROW_LIMIT = 1000;
+// Google's per-request maximum. `fetchAllSearchAnalyticsRows` pages in steps of
+// this size until a short page says the data ran out.
+export const GSC_API_MAX_ROWS = 25_000;
+// Rows one MCP call returns. Larger pulls page with the returned cursor so a
+// single tool result stays inside an agent's context window.
+export const GSC_MAX_ROW_LIMIT = 5000;
 // GSC data trails by ~2-3 days; default the end of convenience ranges before it.
 export const GSC_DATA_LAG_DAYS = 3;
 
 export type GscDimension = (typeof GSC_DIMENSIONS)[number];
 type GscFilterOperator = (typeof GSC_FILTER_OPERATORS)[number];
+export type GscAggregationType = (typeof GSC_AGGREGATION_TYPES)[number];
+export type GscDataState = (typeof GSC_DATA_STATES)[number];
 export type GscSearchType = (typeof GSC_SEARCH_TYPES)[number];
 export type GscDateRange = (typeof GSC_DATE_RANGES)[number];
 
@@ -61,11 +74,15 @@ export type GscPerformanceInput = {
   dateRange?: GscDateRange;
   startDate?: string;
   endDate?: string;
+  // AND-combined. `filterGroups` adds further groups; Google ANDs groups too
+  // and only supports groupType "and".
   filters?: GscPerformanceFilter[];
+  filterGroups?: Array<{ groupType?: "and"; filters: GscPerformanceFilter[] }>;
   rowLimit?: number;
   startRow?: number;
   type?: GscSearchType;
-  dataState?: "all" | "final";
+  dataState?: GscDataState;
+  aggregationType?: GscAggregationType;
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -156,18 +173,29 @@ export function buildSearchAnalyticsRequest(
     rowLimit: clamp(
       input.rowLimit ?? GSC_DEFAULT_ROW_LIMIT,
       1,
-      GSC_MAX_ROW_LIMIT,
+      GSC_API_MAX_ROWS,
     ),
     type: input.type ?? "web",
-    dataState: input.dataState ?? "all",
+    dataState:
+      input.dataState ??
+      (input.dimensions?.includes("hour") ? "hourly_all" : "all"),
   };
+  if (input.aggregationType) {
+    request.aggregationType = input.aggregationType;
+  }
   if (input.startRow && input.startRow > 0) {
     request.startRow = input.startRow;
   }
-  if (input.filters && input.filters.length > 0) {
-    request.dimensionFilterGroups = [
-      { groupType: "and", filters: input.filters },
-    ];
+  const groups = [
+    ...(input.filters && input.filters.length > 0
+      ? [{ groupType: "and" as const, filters: input.filters }]
+      : []),
+    ...(input.filterGroups ?? [])
+      .filter((group) => group.filters.length > 0)
+      .map((group) => ({ groupType: "and" as const, filters: group.filters })),
+  ];
+  if (groups.length > 0) {
+    request.dimensionFilterGroups = groups;
   }
   return request;
 }

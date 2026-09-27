@@ -131,7 +131,7 @@ function isTimeoutError(error: unknown): boolean {
 }
 
 /** Read a response body up to maxBytes; null when the body exceeds it. */
-async function readBodyCapped(
+export async function readBodyCapped(
   response: Response,
   maxBytes: number,
 ): Promise<string | null> {
@@ -158,7 +158,9 @@ async function readBodyCapped(
   return new TextDecoder().decode(joined);
 }
 
-async function fetchSitemapDocumentWithRetry(sitemapUrl: string): Promise<{
+export async function fetchSitemapDocumentWithRetry(
+  sitemapUrl: string,
+): Promise<{
   nestedSitemaps: string[];
   pageUrls: string[];
   timedOut: boolean;
@@ -229,12 +231,41 @@ export async function discoverUrls(
 ): Promise<{ urls: string[]; robotsText: string | null }> {
   const robotsText = await fetchRobotsTxtText(origin);
   const robots = parseRobotsTxt(origin, robotsText);
-
-  // Collect sitemap URLs: from robots.txt + default location
-  const sitemapSources = new Set(robots.sitemapUrls);
-  sitemapSources.add(`${origin}/sitemap.xml`);
-
   const maxDiscoveredUrls = Math.min(Math.max(maxPages * 20, 500), 50_000);
+  const allUrls = await collectSitemapPageUrls(
+    origin,
+    robots.sitemapUrls,
+    maxDiscoveredUrls,
+  );
+
+  // Cap at the crawl's page budget: these are seeds, the crawl can never use
+  // more — and an uncapped list can blow the ~1MiB Workflow step-state limit.
+  return {
+    urls: Array.from(allUrls).slice(0, maxPages),
+    robotsText,
+  };
+}
+
+/** Every same-origin page URL in a site's sitemaps (robots.txt entries plus
+ *  /sitemap.xml), up to `maxUrls`. */
+export async function listSitemapPageUrls(
+  origin: string,
+  maxUrls: number,
+): Promise<string[]> {
+  const robots = parseRobotsTxt(origin, await fetchRobotsTxtText(origin));
+  return Array.from(
+    await collectSitemapPageUrls(origin, robots.sitemapUrls, maxUrls),
+  );
+}
+
+async function collectSitemapPageUrls(
+  origin: string,
+  robotsSitemapUrls: string[],
+  maxDiscoveredUrls: number,
+): Promise<Set<string>> {
+  // Collect sitemap URLs: from robots.txt + default location
+  const sitemapSources = new Set(robotsSitemapUrls);
+  sitemapSources.add(`${origin}/sitemap.xml`);
   const allUrls = new Set<string>();
 
   const queue: Array<{ url: string; depth: number }> = Array.from(
@@ -305,10 +336,5 @@ export async function discoverUrls(
     );
   }
 
-  // Cap at the crawl's page budget: these are seeds, the crawl can never use
-  // more — and an uncapped list can blow the ~1MiB Workflow step-state limit.
-  return {
-    urls: Array.from(allUrls).slice(0, maxPages),
-    robotsText,
-  };
+  return allUrls;
 }

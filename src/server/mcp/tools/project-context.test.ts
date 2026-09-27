@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   deleteResearchLogEntries: vi.fn(),
   listChanges: vi.fn(),
   listTargets: vi.fn(),
+  getForProject: vi.fn(),
 }));
 
 vi.mock("cloudflare:workers", () => ({ env: {} }));
@@ -51,6 +52,10 @@ vi.mock(
   "@/server/features/seo-changes/repositories/SeoChangeRepository",
   () => ({ SeoChangeRepository: mocks }),
 );
+// ...and the weekly audit pointer.
+vi.mock("@/server/features/audit/repositories/AuditScheduleRepository", () => ({
+  AuditScheduleRepository: mocks,
+}));
 
 beforeEach(() => {
   mocks.getProjectForOrganization.mockResolvedValue({ id: "project_1" });
@@ -61,6 +66,7 @@ beforeEach(() => {
   mocks.listTemplates.mockResolvedValue([]);
   mocks.listChanges.mockResolvedValue([]);
   mocks.listTargets.mockResolvedValue([]);
+  mocks.getForProject.mockResolvedValue(undefined);
 });
 
 describe("update_project_context", () => {

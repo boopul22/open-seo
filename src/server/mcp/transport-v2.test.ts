@@ -29,6 +29,10 @@ vi.mock("@/middleware/ensure-user/delegated", () => ({
   resolveLocalNoAuthContext: vi.fn(),
 }));
 
+// The write-tool lookup reads the database; tool gating is covered elsewhere.
+vi.mock("@/server/mcp/server-options", () => ({
+  resolveMcpServerOptions: async () => ({}),
+}));
 vi.mock("@/server/mcp/server", async () => {
   const { McpServer: ActualMcpServer } =
     await import("@modelcontextprotocol/server");

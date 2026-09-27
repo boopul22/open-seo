@@ -2,6 +2,7 @@ import { sort } from "remeda";
 import { z } from "zod";
 import { AuditRepository } from "@/server/features/audit/repositories/AuditRepository";
 import { AuditService } from "@/server/features/audit/services/AuditService";
+import { summarizeIssuesByType } from "@/server/features/audit/services/auditIssueSummary";
 import { AppError } from "@/server/lib/errors";
 import { captureServerEvent } from "@/server/lib/posthog";
 import {
@@ -267,24 +268,7 @@ export const getAuditIssuesTool = {
         a.issueType.localeCompare(b.issueType),
     );
 
-    const counts = new Map<string, number>();
-    for (const row of rows) {
-      counts.set(row.issueType, (counts.get(row.issueType) ?? 0) + 1);
-    }
-    const summary = sort(
-      Array.from(counts.entries()).map(([issueType, count]) => {
-        const descriptor = getIssueDescriptor(issueType);
-        return {
-          issueType,
-          title: descriptor?.title ?? issueType,
-          severity: descriptor?.severity ?? "info",
-          count,
-        };
-      }),
-      (a, b) =>
-        ISSUE_SEVERITY_ORDER[a.severity] - ISSUE_SEVERITY_ORDER[b.severity] ||
-        b.count - a.count,
-    );
+    const summary = summarizeIssuesByType(rows);
 
     const limit = args.limit ?? 200;
     const issues = rows.slice(0, limit).map((row) => {

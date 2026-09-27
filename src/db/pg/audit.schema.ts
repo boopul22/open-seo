@@ -6,6 +6,7 @@ import {
   pgTable,
   real,
   text,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { PAGE_FETCH_CLASSES } from "@/shared/audit-fetch-class";
 import { projects } from "./app.schema";
@@ -177,5 +178,33 @@ export const auditLighthouseResults = pgTable(
   (table) => [
     index("audit_lighthouse_results_audit_id_idx").on(table.auditId),
     index("audit_lighthouse_results_page_id_idx").on(table.pageId),
+  ],
+);
+
+// Column notes live in the SQLite schema (src/db/audit.schema.ts).
+export const auditSchedules = pgTable(
+  "audit_schedules",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    startUrl: text("start_url").notNull(),
+    maxPages: integer("max_pages").notNull(),
+    createdByUserId: text("created_by_user_id").notNull(),
+    nextRunAt: timestampColumn("next_run_at").notNull(),
+    lastRunAt: timestampColumn("last_run_at"),
+    lastAuditId: text("last_audit_id").references(() => audits.id, {
+      onDelete: "set null",
+    }),
+    previousAuditId: text("previous_audit_id").references(() => audits.id, {
+      onDelete: "set null",
+    }),
+    lastSkipReason: text("last_skip_reason"),
+    createdAt: timestampColumn("created_at").notNull().default(isoNow),
+  },
+  (table) => [
+    uniqueIndex("audit_schedules_project_id_idx").on(table.projectId),
+    index("audit_schedules_next_run_at_idx").on(table.nextRunAt),
   ],
 );

@@ -71,15 +71,19 @@ Google Search Console data comes from the user's connected Search Console proper
 
 Hosted OpenSEO can connect to Google Search Console without requiring the user to create a Google Cloud project or OAuth client.
 
-Search Console access is read-only. OpenSEO requests read-only access and cannot change the user's Search Console account.
+Search Console access is read-only by default. A user can opt in to write access, which only adds sitemap submit and remove.
 
 Search Console features include:
 
-- Search performance data: clicks, impressions, CTR, and average position.
-- Breakdown by query, page, country, device, and date.
+- Search performance data: clicks, impressions, CTR, and average position, for web, image, video, news, Discover, and Google News.
+- Breakdown by query, page, country, device, date, hour, and search appearance, with every row available through pagination.
 - Up to 16 months of available Search Console history.
-- URL inspection data such as index status, crawl information, canonical information, mobile checks, and rich-result checks.
-- Up to 10 URLs per URL inspection call.
+- Sitemaps: every submitted sitemap with its errors, warnings, and submitted URL counts.
+- Indexing: Google has no API for the Page indexing report, so OpenSEO rebuilds it. A daily sweep inspects every URL in the sitemaps and Search Analytics with the URL Inspection API (Google allows 2,000 per property per day) and groups the results by Google's reason, such as "Crawled - currently not indexed" or "Not found (404)". It also records each page's title, meta description, and HTTP status from the live page.
+- Enhancements: rich result types and their errors and warnings, from the same inspections.
+- Core Web Vitals from Chrome UX Report field data (needs a CrUX API key).
+- A one-call health summary that also names the reports Google offers no API for: manual actions, security issues, links, crawl stats, and removals. Those must be checked in Search Console itself.
+- Live URL inspection for up to 10 URLs per call.
 
 Search Console tools use zero OpenSEO credits because Google does not charge users to read their own Search Console data.
 

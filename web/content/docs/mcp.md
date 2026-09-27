@@ -136,10 +136,19 @@ OpenSEO MCP exposes tools for SEO research workflows:
 - Check backlink and referring-domain overview data.
 - Read first-party Google Search Console performance (clicks, impressions, CTR, position).
 - Inspect index status, crawl, and canonical for specific URLs (up to 10 per call).
+- Get a one-call Search Console health summary: sitemap errors, indexing problems and new issues, rich result issues, Core Web Vitals, the biggest click and impression drops, and the reports Google has no API for (`get_search_console_health`).
+- Read the rebuilt Page indexing report and list the URLs behind each reason, or every indexed URL with its page title (`get_index_coverage`, `list_index_issues`, `list_indexed_urls`). OpenSEO inspects the site's URLs daily within Google's 2,000-per-day quota; `start_index_sweep` queues a sweep or specific URLs.
+- List submitted sitemaps with errors and warnings (`get_sitemaps`), and submit or remove sitemaps when the Search Console connection was granted write access.
+- Read rich result (Enhancements) issues and Core Web Vitals field data from the Chrome UX Report (`get_rich_result_issues`, `get_core_web_vitals`).
+- Run Google PageSpeed Insights on any URL: Lighthouse lab scores and metrics, CrUX field data, and the top failing audits (`get_pagespeed_insights`; free, no credits).
+- List every Search Console property the connected Google account can see (`list_gsc_properties`).
 - Read and update a project's shared context: business, goal, positioning, writing preferences, competitors, key pages, and a research log (free, no credits).
 - Save and read HTML reports on a project (free, no credits).
+- Test every sitemap URL with Google PageSpeed each week (mobile) and read site-wide scores, the slowest pages, the most common problems, and regressions since last week (`get_pagespeed_report`, `run_pagespeed_sweep`; free, no credits; needs `PAGESPEED_API_KEY` when self-hosting).
+- Turn on a weekly automatic site audit and read what it found, including new and resolved issues since last week (`schedule_site_audit`, `get_scheduled_audit_report`; free, no credits).
 - Log changes shipped to a site and read their measured effect: OpenSEO stores Search Console numbers for the 28 days before each change and measures the same pages and queries 14 and 28 days after (free, no credits).
 - List a project's report templates, and save a reusable report brief to the project (free, no credits).
+- Load SEO methodology playbooks from the open-source [claude-seo](https://github.com/AgriciDaniel/claude-seo) project, covering technical SEO, E-E-A-T, schema, AI search (GEO), agent readiness, local, hreflang, e-commerce, programmatic SEO, clustering, content briefs, and SXO. Your agent follows the playbook's framework and gathers the evidence with OpenSEO tools (`list_seo_playbooks`, `get_seo_playbook`; free, no credits).
 
 ## What to do after setup
 

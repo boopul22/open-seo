@@ -152,12 +152,67 @@ describe("gscClient", () => {
     ).rejects.toBeInstanceOf(GscApiError);
   });
 
-  it("maps 429 to a rate-limit GscApiError", async () => {
-    mocks.fetch.mockResolvedValue(jsonResponse({ error: "slow down" }, 429));
+  it("retries a per-minute 429, then maps it to a rate-limit GscApiError", async () => {
+    mocks.fetch.mockImplementation(async () =>
+      jsonResponse({ error: "slow down" }, 429),
+    );
     const { createGscClient } = await import("./gscClient");
     await expect(
-      createGscClient({ userId: "u1" }).listSites(),
+      createGscClient({ userId: "u1", retryDelaysMs: [0, 0] }).listSites(),
     ).rejects.toMatchObject({ status: 429 });
+    expect(mocks.fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("lists an index's child sitemaps and submits with an empty 204 body", async () => {
+    mocks.fetch
+      .mockResolvedValueOnce(
+        jsonResponse({
+          sitemap: [{ path: "https://x.test/post-sitemap.xml" }],
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const { createGscClient } = await import("./gscClient");
+    const client = createGscClient({ userId: "u1" });
+
+    const children = await client.listSitemaps(
+      "sc-domain:x.test",
+      "https://x.test/sitemap_index.xml",
+    );
+    await client.submitSitemap(
+      "sc-domain:x.test",
+      "https://x.test/sitemap.xml",
+    );
+
+    expect(children).toHaveLength(1);
+    expect(mocks.fetch.mock.calls[0][0]).toBe(
+      "https://www.googleapis.com/webmasters/v3/sites/sc-domain%3Ax.test/sitemaps?sitemapIndex=https%3A%2F%2Fx.test%2Fsitemap_index.xml",
+    );
+    const [submitUrl, submitInit] = mocks.fetch.mock.calls[1];
+    expect(submitUrl).toBe(
+      "https://www.googleapis.com/webmasters/v3/sites/sc-domain%3Ax.test/sitemaps/https%3A%2F%2Fx.test%2Fsitemap.xml",
+    );
+    expect(submitInit?.method).toBe("PUT");
+  });
+
+  it("does not retry an exhausted daily quota", async () => {
+    mocks.fetch.mockImplementation(async () =>
+      jsonResponse(
+        {
+          error: {
+            message: "Quota exceeded for quota metric 'Queries per day'",
+          },
+        },
+        429,
+      ),
+    );
+    const { createGscClient } = await import("./gscClient");
+    await expect(
+      createGscClient({ userId: "u1", retryDelaysMs: [0, 0] }).inspectUrl(
+        "sc-domain:x.test",
+        "https://x.test/",
+      ),
+    ).rejects.toMatchObject({ status: 429 });
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
   });
 
   it("throws GscTokenError when no access token can be minted", async () => {

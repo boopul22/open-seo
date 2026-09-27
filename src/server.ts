@@ -8,7 +8,10 @@ import { ProjectRepository } from "@/server/features/projects/repositories/Proje
 import { SamSessionRepository } from "@/server/features/sam/SamSessionRepository";
 import { runScheduledRankChecks } from "@/server/features/rank-tracking/services/scheduledRankChecks";
 import { reconcileStaleAudits } from "@/server/features/audit/services/auditReconciler";
+import { runScheduledAudits } from "@/server/features/audit/services/scheduledAudits";
+import { PageSpeedSweepService } from "@/server/features/pagespeed/services/PageSpeedSweepService";
 import { runDueChangeMeasurements } from "@/server/features/seo-changes/services/SeoChangeMeasurementService";
+import { GscIndexService } from "@/server/features/gsc/services/GscIndexService";
 import { getOrCreateOrganizationCustomer } from "@/server/billing/subscription";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 import { getAuthMode, isHostedAuthMode } from "@/lib/auth-mode";
@@ -180,11 +183,17 @@ function handleFetch(
 // AuditScratchpad DO live in the open-seo-audit aux worker
 // (src/audit-worker.ts); this worker reaches them via cross-script bindings.
 export { RankCheckWorkflow } from "./server/workflows/RankCheckWorkflow";
+export { IndexSweepWorkflow } from "./server/workflows/IndexSweepWorkflow";
+export { PageSpeedSweepWorkflow } from "./server/workflows/PageSpeedSweepWorkflow";
 // Durable Object class for the SAM in-app agent (Agents SDK).
 export { SamChatAgent } from "./server/features/sam/SamChatAgent";
 
 // Daily OAuth KV garbage collection; must match a trigger in wrangler.jsonc.
 const MCP_OAUTH_PURGE_CRON = "17 3 * * *";
+// Search Console index sweeps, weekly scheduled audits and PageSpeed sweeps;
+// must match a trigger in wrangler.jsonc. Its own trigger so the Docker
+// entrypoint can fire it without the rank checks.
+const GSC_INDEX_SWEEP_CRON = "7 * * * *";
 
 export default {
   fetch,
@@ -214,6 +223,32 @@ export default {
           console.error("[cron] Dub referral sale sweep failed:", err);
         }
       }
+      return;
+    }
+
+    if (controller.cron === GSC_INDEX_SWEEP_CRON) {
+      // Weekly scheduled site audits ride this hourly trigger because it is
+      // the one the Docker entrypoint fires too. Held so a failure can't
+      // suppress the index sweeps, then rethrown.
+      let scheduledAuditError: unknown;
+      try {
+        await withPgClient(() => runScheduledAudits());
+      } catch (err) {
+        scheduledAuditError = err;
+        console.error("[cron] Scheduled audits failed:", err);
+      }
+      // Sitemap-wide PageSpeed sweeps queued by those audits (and quota- or
+      // step-paused ones) start here, a few at a time.
+      try {
+        await withPgClient(() => PageSpeedSweepService.startQueuedSweeps());
+      } catch (err) {
+        scheduledAuditError ??= err;
+        console.error("[cron] PageSpeed sweeps failed:", err);
+      }
+      // Resume sweeps whose quota day rolled over and start each connected
+      // project's daily sweep.
+      await withPgClient(() => GscIndexService.runScheduledSweeps());
+      if (scheduledAuditError) throw scheduledAuditError;
       return;
     }
 

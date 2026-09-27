@@ -47,6 +47,10 @@ vi.mock("@/lib/auth", () => ({
   getHostedBaseUrl: () => "https://open-seo.test",
 }));
 
+// The write-tool lookup reads the database; tool gating is covered elsewhere.
+vi.mock("@/server/mcp/server-options", () => ({
+  resolveMcpServerOptions: async () => ({}),
+}));
 vi.mock("@/server/mcp/server", () => ({
   createOpenSeoMcpServer: (props?: unknown) => {
     selfHostedAuthMocks.createOpenSeoMcpServer(props);

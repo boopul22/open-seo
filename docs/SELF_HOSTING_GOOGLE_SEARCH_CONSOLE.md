@@ -93,6 +93,30 @@ project.
 - Access tokens are minted and refreshed on demand — you only authorize once.
 - Search Console data comes from your own Google account, so OpenSEO never meters credits for it.
 
+## Indexing, sitemaps, and Core Web Vitals
+
+- **Indexing.** Google has no API for the Page indexing report, so OpenSEO
+  rebuilds it from the URL Inspection API. It collects your URL set from your
+  sitemaps and from pages with Search impressions in the last 16 months, then
+  inspects each URL. Google allows 2,000 inspections per property per day and
+  600 per minute. A sweep pauses when the day's quota is spent and resumes after
+  midnight Pacific Time, so a site with more than 2,000 URLs takes several days
+  per full pass. Start a sweep from the project's **Indexing** page with
+  **Run now**. Every connected website project also gets a daily sweep: the
+  hourly `7 * * * *` cron trigger starts it on Cloudflare deployments, and the
+  Docker container fires that same trigger itself.
+- **Sitemap submit and remove.** The default connection is read-only. To let
+  OpenSEO submit or remove sitemaps, click **Allow sitemap submit/delete** on the
+  Indexing page. It asks Google again for the full
+  `https://www.googleapis.com/auth/webmasters` scope. If your OAuth consent screen
+  lists scopes, add that one as well.
+- **Core Web Vitals.** Search Console's Core Web Vitals report has no API either.
+  OpenSEO shows Chrome UX Report field data, which is the dataset behind that
+  report. Enable the **Chrome UX Report API** in your Google Cloud project,
+  create an API key, and set it as `CRUX_API_KEY`.
+- **No API at all.** Manual actions, security issues, links, crawl stats, and
+  removals are only visible in the Search Console web app.
+
 ## Troubleshooting
 
 **`redirect_uri_mismatch` from Google** — the redirect URI in your OAuth client

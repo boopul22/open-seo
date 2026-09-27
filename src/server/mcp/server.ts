@@ -76,6 +76,19 @@ import {
   inspectUrlsTool,
 } from "@/server/mcp/tools/search-console-tools";
 import {
+  deleteSitemapTool,
+  getCoreWebVitalsTool,
+  getIndexCoverageTool,
+  getRichResultIssuesTool,
+  getSearchConsoleHealthTool,
+  getSitemapsTool,
+  listGscPropertiesTool,
+  listIndexIssuesTool,
+  listIndexedUrlsTool,
+  startIndexSweepTool,
+  submitSitemapTool,
+} from "@/server/mcp/tools/search-console-index-tools";
+import {
   getAuditIssuesTool,
   getAuditPagesTool,
   getAuditStatusTool,
@@ -85,6 +98,19 @@ import {
   deleteSiteAuditTool,
   listSiteAuditsTool,
 } from "@/server/mcp/tools/site-audit-cleanup-tools";
+import {
+  getPageSpeedInsightsTool,
+  getPageSpeedReportTool,
+  runPageSpeedSweepTool,
+} from "@/server/mcp/tools/pagespeed-tools";
+import {
+  getScheduledAuditReportTool,
+  scheduleSiteAuditTool,
+} from "@/server/mcp/tools/audit-schedule-tools";
+import {
+  getSeoPlaybookTool,
+  listSeoPlaybooksTool,
+} from "@/server/mcp/tools/seo-playbook-tools";
 import { whoamiTool } from "@/server/mcp/tools/whoami";
 import {
   getChangeImpactTool,
@@ -192,7 +218,16 @@ function registerOpenSeoTool<Input extends ToolSchema>(
   );
 }
 
-export function createOpenSeoMcpServer(authProps: McpProps) {
+export type OpenSeoMcpServerOptions = {
+  // List submit_sitemap/delete_sitemap. Only true when the user's Search
+  // Console grant carries the opt-in write scope.
+  gscWriteTools?: boolean;
+};
+
+export function createOpenSeoMcpServer(
+  authProps: McpProps,
+  options: OpenSeoMcpServerOptions = {},
+) {
   const server = new McpServer(
     {
       name: "OpenSEO MCP",
@@ -216,7 +251,7 @@ export function createOpenSeoMcpServer(authProps: McpProps) {
       // Without the pre-declaration, registerTool defaults it to true.
       capabilities: { tools: { listChanged: false } },
       instructions:
-        "OpenSEO research tools use credits. Proceed with normal focused research, but ask the user for confirmation before planned batches over 2,000 credits.",
+        "OpenSEO research tools use credits. Proceed with normal focused research, but ask the user for confirmation before planned batches over 2,000 credits. For questions about a project's site health or what is broken, read get_scheduled_audit_report first; for site speed, read get_pagespeed_report.",
     },
   );
 
@@ -258,6 +293,22 @@ export function createOpenSeoMcpServer(authProps: McpProps) {
   register(getKeywordMetricsTool);
   register(getSearchConsolePerformanceTool);
   register(inspectUrlsTool);
+  register(getSearchConsoleHealthTool);
+  register(listGscPropertiesTool);
+  register(getSitemapsTool);
+  register(getIndexCoverageTool);
+  register(listIndexIssuesTool);
+  register(listIndexedUrlsTool);
+  register(getRichResultIssuesTool);
+  register(startIndexSweepTool);
+  register(getCoreWebVitalsTool);
+  register(getPageSpeedInsightsTool);
+  register(getPageSpeedReportTool);
+  register(runPageSpeedSweepTool);
+  if (options.gscWriteTools) {
+    register(submitSitemapTool);
+    register(deleteSitemapTool);
+  }
   register(getGoogleAnalyticsOrganicLandingPagesTool);
   register(getGoogleAnalyticsPagePerformanceTool);
   register(getGoogleAnalyticsKeyEventsTool);
@@ -303,6 +354,8 @@ export function createOpenSeoMcpServer(authProps: McpProps) {
   register(getAuditStatusTool);
   register(getAuditIssuesTool);
   register(getAuditPagesTool);
+  register(scheduleSiteAuditTool);
+  register(getScheduledAuditReportTool);
   register(saveReportTool);
   register(listReportsTool);
   register(logChangeTool);
@@ -314,6 +367,8 @@ export function createOpenSeoMcpServer(authProps: McpProps) {
   register(listReportTemplatesTool);
   register(saveReportTemplateTool);
   register(deleteReportTemplateTool);
+  register(listSeoPlaybooksTool);
+  register(getSeoPlaybookTool);
 
   return server;
 }

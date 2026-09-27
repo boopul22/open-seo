@@ -3,6 +3,7 @@ import { getRequest } from "@tanstack/react-start/server";
 import { waitUntil } from "cloudflare:workers";
 import { z } from "zod";
 import { GscService } from "@/server/features/gsc/services/GscService";
+import { GSC_WRITE_OAUTH_SCOPES } from "@/shared/gsc";
 import { hasSelfHostedGoogleOAuthConfig } from "@/server/features/google/oauth-config";
 import {
   createSelfHostedGoogleAuthorizationUrl,
@@ -25,6 +26,8 @@ const setSiteSchema = projectScopedSchema.extend({
 });
 const startSelfHostedLinkSchema = z.object({
   callbackURL: z.string().min(1),
+  // Opt-in re-consent with the full webmasters scope (sitemap submit/delete).
+  write: z.boolean().optional(),
 });
 
 // Account-level grant check (no project needed) for surfaces like onboarding
@@ -55,6 +58,9 @@ export const getGscConnection = createServerFn({ method: "POST" })
       siteUrl: connection?.siteUrl ?? null,
       connectedByEmail: connection?.connectedAccountEmail ?? null,
       connectedAt: connection?.createdAt ?? null,
+      sitemapWriteEnabled: connection
+        ? await GscService.connectionCanWrite(connection)
+        : false,
     };
   });
 
@@ -154,6 +160,7 @@ export const startSelfHostedGscLink = createServerFn({ method: "POST" })
       },
       callbackURL: data.callbackURL,
       publicOrigin,
+      scopes: data.write ? GSC_WRITE_OAUTH_SCOPES : undefined,
     });
 
     return { url };

@@ -1,3 +1,4 @@
+import { AuditScheduleRepository } from "@/server/features/audit/repositories/AuditScheduleRepository";
 import { z } from "zod";
 import { ProjectContextService } from "@/server/features/project-context/services/ProjectContextService";
 import { buildProjectMeta } from "@/server/mcp/context";
@@ -52,13 +53,19 @@ export const getProjectContextTool = {
   },
   handler: withMcpProjectAuth(
     async (args: z.infer<z.ZodObject<typeof getInputSchema>>, context) => {
-      const projectContext = await ProjectContextService.getProjectContext(
-        args.projectId,
-      );
+      const [projectContext, auditSchedule] = await Promise.all([
+        ProjectContextService.getProjectContext(args.projectId),
+        AuditScheduleRepository.getForProject(args.projectId),
+      ]);
+      // A pointer, not the report: this is the call every agent makes first,
+      // so it stays one indexed read.
+      const auditNote = auditSchedule
+        ? `\n\nWeekly site audit is on for ${auditSchedule.startUrl}${auditSchedule.lastRunAt ? ` (last run ${auditSchedule.lastRunAt})` : ""}${auditSchedule.lastSkipReason ? `; last due run skipped: ${auditSchedule.lastSkipReason}` : ""}. Read get_scheduled_audit_report for current issues and what changed since last week.`
+        : "";
       return mcpResponse({
-        text: ProjectContextService.renderProjectContextMarkdown(
-          projectContext,
-        ),
+        text:
+          ProjectContextService.renderProjectContextMarkdown(projectContext) +
+          auditNote,
         meta: buildProjectMeta(
           context,
           args.projectId,

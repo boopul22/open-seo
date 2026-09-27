@@ -146,7 +146,7 @@ describe("search console MCP tools", () => {
       );
 
     expect(mocks.GscService.getPerformance).toHaveBeenCalledWith(
-      expect.objectContaining({ rowLimit: 1000, startRow: 10 }),
+      expect.objectContaining({ rowLimit: 25_000, startRow: 10 }),
     );
     expect(mocks.GscService.getPerformance).toHaveBeenCalledWith(
       expect.not.objectContaining({ minPosition: 5 }),
