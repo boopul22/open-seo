@@ -34,7 +34,11 @@ const schema = { ...appSchema, ...gscSchema, ...ga4Schema, account };
 type Db = ReturnType<typeof drizzle<typeof schema>>;
 
 type GscSite = { siteUrl: string; permissionLevel: string };
-type Ga4Prop = { propertyId: string; displayName: string; accountDisplayName: string };
+type Ga4Prop = {
+  propertyId: string;
+  displayName: string;
+  accountDisplayName: string;
+};
 
 async function mintAccessToken(input: {
   clientId: string;
@@ -53,18 +57,25 @@ async function mintAccessToken(input: {
   });
   if (!res.ok) throw new Error(`token refresh failed (${res.status})`);
   const data = (await res.json()) as { access_token?: string };
-  if (!data.access_token) throw new Error("token refresh returned no access_token");
+  if (!data.access_token)
+    throw new Error("token refresh returned no access_token");
   return data.access_token;
 }
 
-async function gapi<T>(url: string, token: string, init?: RequestInit): Promise<T> {
+async function gapi<T>(
+  url: string,
+  token: string,
+  init?: RequestInit,
+): Promise<T> {
   const res = await fetch(url, {
     ...init,
     headers: { Authorization: `Bearer ${token}`, ...(init?.headers ?? {}) },
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`Google API ${res.status} on ${url}: ${body.slice(0, 200)}`);
+    throw new Error(
+      `Google API ${res.status} on ${url}: ${body.slice(0, 200)}`,
+    );
   }
   return (await res.json()) as T;
 }
@@ -73,7 +84,12 @@ async function getGrant(db: Db, provider: string) {
   const rows = await db
     .select()
     .from(account)
-    .where(and(eq(account.userId, LOCAL_ADMIN_USER_ID), eq(account.providerId, provider)))
+    .where(
+      and(
+        eq(account.userId, LOCAL_ADMIN_USER_ID),
+        eq(account.providerId, provider),
+      ),
+    )
     .limit(1);
   return rows[0] ?? null;
 }
@@ -115,7 +131,9 @@ function matchGa4Prop(
   // 2. displayName match
   const scored = props
     .map((p) => ({ p, n: norm(p.displayName) }))
-    .filter(({ n }) => n && (d.includes(n) || n.includes(d.replace(/^(www)/, ""))));
+    .filter(
+      ({ n }) => n && (d.includes(n) || n.includes(d.replace(/^(www)/, ""))),
+    );
   if (scored.length === 1) return scored[0]!.p;
   // 3. domain core (without TLD) inside displayName
   const core = norm(domain.split(".")[0] ?? "");
@@ -130,8 +148,10 @@ async function main() {
   const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
   const secret = process.env.BETTER_AUTH_SECRET?.trim();
-  if (!clientId || !clientSecret) throw new Error("GOOGLE_CLIENT_ID/SECRET missing in env");
-  if (!secret || secret.length < 32) throw new Error("BETTER_AUTH_SECRET missing/short");
+  if (!clientId || !clientSecret)
+    throw new Error("GOOGLE_CLIENT_ID/SECRET missing in env");
+  if (!secret || secret.length < 32)
+    throw new Error("BETTER_AUTH_SECRET missing/short");
 
   const { env, dispose } = await getPlatformProxy<{ DB: D1Database }>();
   const db = drizzle(env.DB, { schema });
@@ -146,14 +166,25 @@ async function main() {
     // ---------- GSC ----------
     const gscGrant = await getGrant(db, GSC_PROVIDER);
     if (!gscGrant) {
-      console.log("GSC: no google-search-console grant — connect Google in the app first.");
+      console.log(
+        "GSC: no google-search-console grant — connect Google in the app first.",
+      );
     } else {
-      const refresh = await symmetricDecrypt({ key: secret, data: gscGrant.refreshToken! });
+      const refresh = await symmetricDecrypt({
+        key: secret,
+        data: gscGrant.refreshToken!,
+      });
       let token: string;
       try {
-        token = await mintAccessToken({ clientId, clientSecret, refreshToken: refresh });
+        token = await mintAccessToken({
+          clientId,
+          clientSecret,
+          refreshToken: refresh,
+        });
       } catch (e) {
-        console.log(`GSC: refresh failed (${(e as Error).message}) — reconnect Google in the app.`);
+        console.log(
+          `GSC: refresh failed (${(e as Error).message}) — reconnect Google in the app.`,
+        );
         token = "";
       }
       if (token) {
@@ -165,22 +196,40 @@ async function main() {
           );
           sites = data.siteEntry ?? [];
         } catch (e) {
-          console.log(`GSC: sites.list failed (${(e as Error).message}). Is the Search Console API enabled?`);
+          console.log(
+            `GSC: sites.list failed (${(e as Error).message}). Is the Search Console API enabled?`,
+          );
         }
         console.log(`GSC: ${sites.length} verified properties on the grant.`);
         let email: string | null = null;
         try {
-          const me = await gapi<{ email?: string }>("https://openidconnect.googleapis.com/v1/userinfo", token);
+          const me = await gapi<{ email?: string }>(
+            "https://openidconnect.googleapis.com/v1/userinfo",
+            token,
+          );
           email = me.email ?? null;
-        } catch { email = null; }
+        } catch {
+          email = null;
+        }
         for (const p of projects) {
-          if (!p.domain) { console.log(`GSC skip ${p.name}: no domain`); continue; }
+          if (!p.domain) {
+            console.log(`GSC skip ${p.name}: no domain`);
+            continue;
+          }
           const existing = await db.query.gscConnections.findFirst({
             where: eq(gscSchema.gscConnections.projectId, p.id),
           });
-          if (existing) { console.log(`GSC ok ${p.domain}: already -> ${existing.siteUrl}`); continue; }
+          if (existing) {
+            console.log(`GSC ok ${p.domain}: already -> ${existing.siteUrl}`);
+            continue;
+          }
           const hit = matchGscSite(p.domain, sites);
-          if (!hit) { console.log(`GSC miss ${p.domain}: no matching property in sites.list`); continue; }
+          if (!hit) {
+            console.log(
+              `GSC miss ${p.domain}: no matching property in sites.list`,
+            );
+            continue;
+          }
           await db
             .insert(gscSchema.gscConnections)
             .values({
@@ -209,55 +258,88 @@ async function main() {
     // ---------- GA4 ----------
     const ga4Grant = await getGrant(db, GA4_PROVIDER);
     if (!ga4Grant) {
-      console.log("GA4: no google-analytics grant — connect Google in the app first.");
+      console.log(
+        "GA4: no google-analytics grant — connect Google in the app first.",
+      );
     } else {
-      const refresh = await symmetricDecrypt({ key: secret, data: ga4Grant.refreshToken! });
+      const refresh = await symmetricDecrypt({
+        key: secret,
+        data: ga4Grant.refreshToken!,
+      });
       let token = "";
       try {
-        token = await mintAccessToken({ clientId, clientSecret, refreshToken: refresh });
+        token = await mintAccessToken({
+          clientId,
+          clientSecret,
+          refreshToken: refresh,
+        });
       } catch (e) {
-        console.log(`GA4: refresh failed (${(e as Error).message}) — reconnect Google in the app.`);
+        console.log(
+          `GA4: refresh failed (${(e as Error).message}) — reconnect Google in the app.`,
+        );
       }
       if (token) {
         const props: Ga4Prop[] = [];
         let pageToken: string | undefined;
         try {
           for (let i = 0; i < 20; i += 1) {
-            const u = new URL("https://analyticsadmin.googleapis.com/v1beta/accountSummaries");
+            const u = new URL(
+              "https://analyticsadmin.googleapis.com/v1beta/accountSummaries",
+            );
             u.searchParams.set("pageSize", "200");
             if (pageToken) u.searchParams.set("pageToken", pageToken);
             const data = await gapi<{
               accountSummaries?: Array<{
                 displayName: string;
-                propertySummaries?: Array<{ property: string; displayName: string }>;
+                propertySummaries?: Array<{
+                  property: string;
+                  displayName: string;
+                }>;
               }>;
               nextPageToken?: string;
             }>(u.toString(), token);
             for (const a of data.accountSummaries ?? []) {
               for (const pr of a.propertySummaries ?? []) {
-                props.push({ propertyId: pr.property, displayName: pr.displayName, accountDisplayName: a.displayName });
+                props.push({
+                  propertyId: pr.property,
+                  displayName: pr.displayName,
+                  accountDisplayName: a.displayName,
+                });
               }
             }
             pageToken = data.nextPageToken || undefined;
             if (!pageToken) break;
           }
         } catch (e) {
-          console.log(`GA4: accountSummaries failed (${(e as Error).message}). Are the Analytics Admin+Data APIs enabled?`);
+          console.log(
+            `GA4: accountSummaries failed (${(e as Error).message}). Are the Analytics Admin+Data APIs enabled?`,
+          );
         }
         console.log(`GA4: ${props.length} properties on the grant.`);
         // dataStream hosts for precise matching
         const streamHosts = new Map<string, string[]>();
-        const details = new Map<string, { displayName: string; timeZone: string; currencyCode: string }>();
+        const details = new Map<
+          string,
+          { displayName: string; timeZone: string; currencyCode: string }
+        >();
         for (const pr of props) {
           try {
-            const d = await gapi<{ displayName: string; timeZone: string; currencyCode: string }>(
+            const d = await gapi<{
+              displayName: string;
+              timeZone: string;
+              currencyCode: string;
+            }>(
               `https://analyticsadmin.googleapis.com/v1beta/${pr.propertyId}`,
               token,
             );
             details.set(pr.propertyId, d);
-          } catch { /* keep summary */ }
+          } catch {
+            /* keep summary */
+          }
           try {
-            const s = await gapi<{ dataStreams?: Array<{ webStreamData?: { defaultUri?: string } }> }>(
+            const s = await gapi<{
+              dataStreams?: Array<{ webStreamData?: { defaultUri?: string } }>;
+            }>(
               `https://analyticsadmin.googleapis.com/v1alpha/${pr.propertyId}/dataStreams?pageSize=200`,
               token,
             );
@@ -265,25 +347,47 @@ async function main() {
             for (const ds of s.dataStreams ?? []) {
               const uri = ds.webStreamData?.defaultUri;
               if (uri) {
-                try { hosts.push(new URL(uri).hostname); } catch { hosts.push(uri); }
+                try {
+                  hosts.push(new URL(uri).hostname);
+                } catch {
+                  hosts.push(uri);
+                }
               }
             }
             streamHosts.set(pr.propertyId, hosts);
-          } catch { streamHosts.set(pr.propertyId, []); }
+          } catch {
+            streamHosts.set(pr.propertyId, []);
+          }
         }
         let email: string | null = null;
         try {
-          const me = await gapi<{ email?: string }>("https://openidconnect.googleapis.com/v1/userinfo", token);
+          const me = await gapi<{ email?: string }>(
+            "https://openidconnect.googleapis.com/v1/userinfo",
+            token,
+          );
           email = me.email ?? null;
-        } catch { email = null; }
+        } catch {
+          email = null;
+        }
         for (const p of projects) {
-          if (!p.domain) { console.log(`GA4 skip ${p.name}: no domain`); continue; }
+          if (!p.domain) {
+            console.log(`GA4 skip ${p.name}: no domain`);
+            continue;
+          }
           const existing = await db.query.ga4Connections.findFirst({
             where: eq(ga4Schema.ga4Connections.projectId, p.id),
           });
-          if (existing) { console.log(`GA4 ok ${p.domain}: already -> ${existing.propertyDisplayName} (${existing.propertyId})`); continue; }
+          if (existing) {
+            console.log(
+              `GA4 ok ${p.domain}: already -> ${existing.propertyDisplayName} (${existing.propertyId})`,
+            );
+            continue;
+          }
           const hit = matchGa4Prop(p.domain, props, streamHosts);
-          if (!hit) { console.log(`GA4 miss ${p.domain}: no matching property`); continue; }
+          if (!hit) {
+            console.log(`GA4 miss ${p.domain}: no matching property`);
+            continue;
+          }
           const det = details.get(hit.propertyId) ?? {
             displayName: hit.displayName,
             timeZone: "America/Los_Angeles",
@@ -315,7 +419,9 @@ async function main() {
                 connectedAccountEmail: email,
               },
             });
-          console.log(`GA4 linked ${p.domain} -> ${det.displayName} (${hit.propertyId})`);
+          console.log(
+            `GA4 linked ${p.domain} -> ${det.displayName} (${hit.propertyId})`,
+          );
         }
       }
     }
