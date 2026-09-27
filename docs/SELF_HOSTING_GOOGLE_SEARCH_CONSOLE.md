@@ -114,6 +114,10 @@ project.
   OpenSEO shows Chrome UX Report field data, which is the dataset behind that
   report. Enable the **Chrome UX Report API** in your Google Cloud project,
   create an API key, and set it as `CRUX_API_KEY`.
+- **PageSpeed.** The weekly sitemap-wide PageSpeed sweeps and the
+  `get_pagespeed_insights` MCP tool call the PageSpeed Insights API. Enable it
+  on the same Google Cloud project and set `PAGESPEED_API_KEY` (one key can
+  serve both APIs; `CRUX_API_KEY` is used when `PAGESPEED_API_KEY` is unset).
 - **No API at all.** Manual actions, security issues, links, crawl stats, and
   removals are only visible in the Search Console web app.
 

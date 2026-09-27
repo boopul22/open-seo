@@ -29,9 +29,6 @@ const STEP_CONFIG = {
 // waiting_quota and the cron relaunches it with a fresh instance. 300 steps is
 // several quota days of batches plus their sleeps.
 const MAX_LOOP_STEPS = 300;
-// A quota pause longer than this ends the instance instead of sleeping, so a
-// sweep doesn't hold a workflow open for days; the cron resumes it.
-const MAX_QUOTA_SLEEP_MS = 26 * 3600_000;
 
 /** Inspects a project's URL set with the URL Inspection API, one batch per
  *  step. All progress is on the URL rows, so a retried step or a relaunched
@@ -84,10 +81,8 @@ export class IndexSweepWorkflow extends WorkflowEntrypoint<
           await step.sleep(`rate-limit-${i}`, outcome.waitMs);
           continue;
         }
-        // Daily quota spent: sleep to the reset when it's close, else leave
-        // the sweep paused for the cron.
+        // Daily quota spent: sleep to the reset (midnight Pacific, ≤25h away).
         const sleepMs = Date.parse(outcome.resumeAt) - outcome.at;
-        if (sleepMs > MAX_QUOTA_SLEEP_MS) return;
         await step.sleep(`quota-reset-${i}`, Math.max(sleepMs, 1_000) + 60_000);
         bursts.length = 0;
       }

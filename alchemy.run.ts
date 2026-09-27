@@ -290,6 +290,9 @@ const dataEnv = {
   POSTHOG_HOST: optionalVar("POSTHOG_HOST"),
   TURNSTILE_SECRET_KEY: optionalSecret("TURNSTILE_SECRET_KEY"),
   TURNSTILE_SITE_KEY: optionalVar("TURNSTILE_SITE_KEY"),
+  // Google Cloud API keys for Chrome UX Report and PageSpeed Insights.
+  CRUX_API_KEY: optionalSecret("CRUX_API_KEY"),
+  PAGESPEED_API_KEY: optionalSecret("PAGESPEED_API_KEY"),
   // Alchemy reconciles worker vars on every deploy, so the telemetry opt-out
   // must live in the env file — a dashboard-set var would be wiped.
   OPENSEO_TELEMETRY_DISABLED: optionalVar("OPENSEO_TELEMETRY_DISABLED"),

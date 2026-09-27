@@ -103,7 +103,9 @@
     },
   ],
   "triggers": {
-    // Every 5 min: rank checks + stale-audit reconcile. Daily: OAuth KV GC.
+    // Every 5 min: rank checks + stale-audit reconcile. Hourly (:07): scheduled
+    // site audits, PageSpeed sweeps, GSC index sweeps (also fired by the
+    // self-host Docker entrypoint). Daily: OAuth KV GC.
     // Dispatched on controller.cron in src/server.ts `scheduled`.
     "crons": ["*/5 * * * *", "17 3 * * *", "7 * * * *"],
   },
