@@ -15,7 +15,7 @@ import {
   type YoutubeResolvedRange,
 } from "@/server/features/youtube/services/YoutubeDates";
 
-export const YOUTUBE_OVERVIEW_METRICS = [
+const YOUTUBE_OVERVIEW_METRICS = [
   "views",
   "estimatedMinutesWatched",
   "averageViewDuration",
@@ -52,7 +52,7 @@ const YOUTUBE_TRAFFIC_SOURCE_METRICS = [
 
 const MAX_TOP_VIDEOS = 200;
 
-export type YoutubeChannelRef = {
+type YoutubeChannelRef = {
   channelId: string;
   channelTitle: string;
   channelHandle: string | null;
@@ -152,7 +152,7 @@ async function withMappedErrors<T>(operation: () => Promise<T>): Promise<T> {
   }
 }
 
-export type YoutubeRangeInput = {
+type YoutubeRangeInput = {
   projectId: string;
   startDate?: string;
   endDate?: string;

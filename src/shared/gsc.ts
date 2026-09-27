@@ -15,7 +15,7 @@ export const GSC_SELF_HOSTED_SETUP_DOCS_URL =
 
 // Opt-in re-consent that lets OpenSEO submit and delete sitemaps. The default
 // grant stays read-only; write tools only appear once a grant carries this.
-export const GSC_WRITE_SCOPE = "https://www.googleapis.com/auth/webmasters";
+const GSC_WRITE_SCOPE = "https://www.googleapis.com/auth/webmasters";
 
 export const GSC_WRITE_OAUTH_SCOPES = [
   "openid",

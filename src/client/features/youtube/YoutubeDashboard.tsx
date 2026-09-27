@@ -30,7 +30,7 @@ import {
   type YoutubeAudienceRow,
 } from "@/serverFunctions/youtubeAudience";
 
-export const YOUTUBE_DASHBOARD_RANGE_DAYS = [7, 28, 90] as const;
+const YOUTUBE_DASHBOARD_RANGE_DAYS = [7, 28, 90] as const;
 const DEFAULT_RANGE_DAYS = 28;
 const ANALYTICS_LAG_NOTE = "Analytics lags about 2 days; showing through";
 const RANKED_VIDEO_LIMIT = 10;

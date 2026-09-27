@@ -20,7 +20,7 @@ export const YOUTUBE_AUDIENCE_DIMENSIONS = [
 export type YoutubeAudienceDimension =
   (typeof YOUTUBE_AUDIENCE_DIMENSIONS)[number];
 
-export type YoutubeAudienceChannel = {
+type YoutubeAudienceChannel = {
   channelId: string;
   channelTitle: string;
   channelHandle: string | null;
@@ -35,7 +35,7 @@ export type YoutubeRetentionPoint = {
   relativeRetentionPerformance: number | null;
 };
 
-export type YoutubeAudienceRequest = {
+type YoutubeAudienceRequest = {
   resolvedRange: { startDate: string; endDate: string };
   warnings: string[];
   videoId?: string;
@@ -44,14 +44,14 @@ export type YoutubeAudienceRequest = {
   detail?: boolean;
 };
 
-export type YoutubeAudienceReport = {
+type YoutubeAudienceReport = {
   source: "youtube_analytics_api";
   channel: YoutubeAudienceChannel;
   request: YoutubeAudienceRequest;
   rows: YoutubeAudienceRow[];
 };
 
-export type YoutubeVideoRetentionReport = YoutubeAudienceReport & {
+type YoutubeVideoRetentionReport = YoutubeAudienceReport & {
   videoId: string;
   averageViewPercentage: number | null;
   views: number | null;

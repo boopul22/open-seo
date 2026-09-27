@@ -22,7 +22,7 @@ const DEFAULT_TOP_PAGES = 10;
 export const MAX_TOP_PAGES = 50;
 const CRUX_CONCURRENCY = 5;
 
-export type CwvMetricResult = {
+type CwvMetricResult = {
   p75: number | null;
   rating: CwvRating | null;
   good: number;
@@ -30,7 +30,7 @@ export type CwvMetricResult = {
   poor: number;
 };
 
-export type CwvRecordResult = {
+type CwvRecordResult = {
   formFactor: CruxFormFactor;
   // null: CrUX has too little Chrome traffic for this origin/URL.
   assessment: "pass" | "fail" | null;
@@ -118,10 +118,7 @@ async function topPages(projectId: string, limit: number) {
 
 /** A URL-prefix property is its own origin. A domain property covers every
  *  host, so pick the host carrying the most search impressions. */
-export function originForProperty(
-  siteUrl: string,
-  pageUrls: string[],
-): string | null {
+function originForProperty(siteUrl: string, pageUrls: string[]): string | null {
   if (!siteUrl.startsWith("sc-domain:")) {
     try {
       return new URL(siteUrl).origin;

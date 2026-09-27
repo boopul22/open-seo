@@ -95,7 +95,7 @@ export async function missingSelfHostedGoogleClientResponse(
   });
 }
 
-export function invalidRequest(
+function invalidRequest(
   meta: ReturnType<typeof buildProjectMeta>,
   message: string,
 ) {

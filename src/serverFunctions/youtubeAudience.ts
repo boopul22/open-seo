@@ -9,7 +9,6 @@ export type {
   YoutubeAudienceDimension,
   YoutubeAudienceRow,
   YoutubeRetentionPoint,
-  YoutubeVideoRetentionReport,
 } from "@/server/features/youtube/services/YoutubeAudienceService";
 
 const projectScopedSchema = z.object({ projectId: z.string().min(1) });

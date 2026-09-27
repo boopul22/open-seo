@@ -43,7 +43,7 @@ import {
 export const KEYWORD_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 export const KEYWORD_SAMPLE_SIZE = 25;
 export const MAX_IDEA_SEED_LETTERS = 12;
-export const AUTOCOMPLETE_ENABLED = true;
+const AUTOCOMPLETE_ENABLED = true;
 
 const IDEA_SEARCH_SAMPLE_SIZE = 10;
 const IDEA_LIMIT_DEFAULT = 25;

@@ -1,7 +1,7 @@
 import { sort } from "remeda";
 import type { GscSearchAnalyticsRow } from "@/server/lib/gscClient";
 
-export type PerformanceDrop = {
+type PerformanceDrop = {
   key: string;
   clicks: number;
   previousClicks: number;
@@ -11,7 +11,7 @@ export type PerformanceDrop = {
   impressionChange: number;
 };
 
-export type PeriodTotals = { clicks: number; impressions: number };
+type PeriodTotals = { clicks: number; impressions: number };
 
 function byKey(rows: GscSearchAnalyticsRow[]) {
   const map = new Map<string, { clicks: number; impressions: number }>();

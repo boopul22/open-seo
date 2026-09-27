@@ -8,17 +8,16 @@ export type CwvRating = "good" | "needs_improvement" | "poor";
 
 // Google's published p75 thresholds (web.dev/articles/vitals). A value at or
 // under `good` is good; above `poor` is poor.
-export const CWV_THRESHOLDS: Record<CwvMetric, { good: number; poor: number }> =
-  {
-    lcp: { good: 2500, poor: 4000 },
-    inp: { good: 200, poor: 500 },
-    cls: { good: 0.1, poor: 0.25 },
-    fcp: { good: 1800, poor: 3000 },
-    ttfb: { good: 800, poor: 1800 },
-  };
+const CWV_THRESHOLDS: Record<CwvMetric, { good: number; poor: number }> = {
+  lcp: { good: 2500, poor: 4000 },
+  inp: { good: 200, poor: 500 },
+  cls: { good: 0.1, poor: 0.25 },
+  fcp: { good: 1800, poor: 3000 },
+  ttfb: { good: 800, poor: 1800 },
+};
 
 // The three metrics that make up the Core Web Vitals assessment.
-export const CORE_WEB_VITALS: readonly CwvMetric[] = ["lcp", "inp", "cls"];
+const CORE_WEB_VITALS: readonly CwvMetric[] = ["lcp", "inp", "cls"];
 
 export function rateCwv(metric: CwvMetric, p75: number): CwvRating {
   const { good, poor } = CWV_THRESHOLDS[metric];

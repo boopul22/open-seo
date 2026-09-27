@@ -37,8 +37,6 @@ import {
 // given, and URL/inspection rows are only reached through it.
 
 export type SweepRow = typeof gscIndexSweeps.$inferSelect;
-export type SitemapRow = typeof gscSitemaps.$inferSelect;
-export type InspectionRow = typeof gscUrlInspections.$inferSelect;
 type InspectionInsert = Omit<
   typeof gscUrlInspections.$inferInsert,
   "id" | "urlId"
@@ -335,7 +333,7 @@ async function coverageGroups(
   }));
 }
 
-export type UrlListFilter = {
+type UrlListFilter = {
   projectId: string;
   // Exact Google coverage state; null lists never-inspected URLs.
   coverageState?: string | null;

@@ -8,7 +8,7 @@ import {
 const CRUX_API_BASE = "https://chromeuxreport.googleapis.com/v1";
 
 // CrUX names each metric by its long id; TTFB is still "experimental".
-export const CRUX_METRIC_IDS: Record<CwvMetric, string> = {
+const CRUX_METRIC_IDS: Record<CwvMetric, string> = {
   lcp: "largest_contentful_paint",
   inp: "interaction_to_next_paint",
   cls: "cumulative_layout_shift",

@@ -6,13 +6,8 @@ import { requireProjectContext } from "@/serverFunctions/middleware";
 // Type-only re-exports so client code can type its rows without importing the
 // server service module at runtime.
 export type {
-  YoutubeBestPublishDays,
   YoutubeChannelGrowth,
-  YoutubeChannelGrowthPoint,
-  YoutubePublishDay,
-  YoutubeVideoTrend,
   YoutubeVideoTrendPoint,
-  YoutubeWeekday,
 } from "@/server/features/youtube/services/YoutubePerformanceService";
 
 const projectScopedSchema = z.object({ projectId: z.string().min(1) });

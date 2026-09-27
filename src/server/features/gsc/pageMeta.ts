@@ -5,7 +5,7 @@ const PAGE_FETCH_TIMEOUT_MS = 10_000;
 // Titles sit in <head>; a capped read keeps a huge page from costing memory.
 const MAX_PAGE_BYTES = 2 * 1024 * 1024;
 
-export type PageMeta = {
+type PageMeta = {
   httpStatus: number | null;
   title: string | null;
   metaDescription: string | null;

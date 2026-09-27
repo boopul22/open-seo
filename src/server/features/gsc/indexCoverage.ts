@@ -11,7 +11,7 @@ export type IndexStatus = "indexed" | "not_indexed" | "error" | "uninspected";
 
 // verdict PASS is Google's "URL is on Google". PARTIAL/NEUTRAL/FAIL are all
 // excluded from the index; the coverage state says why.
-export function indexStatusOf(input: {
+function indexStatusOf(input: {
   verdict: string | null;
   error: string | null;
   inspected: boolean;
@@ -125,7 +125,7 @@ export type RichResultIssueRow = {
   url: string;
 };
 
-export type RichResultGroup = {
+type RichResultGroup = {
   richResultType: string;
   // Pages where Google detected this rich result type.
   pages: number;
