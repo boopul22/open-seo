@@ -14,7 +14,7 @@ import { getOptionalEnvValue } from "@/server/lib/runtime-env";
 const PAGESPEED_API_URL =
   "https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
 
-export const PAGESPEED_API_KEY_ENV = "PAGESPEED_API_KEY";
+const PAGESPEED_API_KEY_ENV = "PAGESPEED_API_KEY";
 
 /** One Google Cloud key can enable both the PageSpeed and CrUX APIs, so the
  *  CrUX key is the fallback. */
