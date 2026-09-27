@@ -8,7 +8,7 @@ import { startSelfHostedGa4Link } from "@/serverFunctions/ga4";
 import { startSelfHostedGscLink } from "@/serverFunctions/gsc";
 import { startSelfHostedYoutubeLink } from "@/serverFunctions/youtube";
 import { GA4_OAUTH_PROVIDER_ID } from "@/shared/ga4";
-import { GSC_OAUTH_PROVIDER_ID } from "@/shared/gsc";
+import { GSC_OAUTH_PROVIDER_ID, GSC_WRITE_OAUTH_SCOPES } from "@/shared/gsc";
 import { YOUTUBE_OAUTH_PROVIDER_ID } from "@/shared/youtube";
 
 const googleProviders = {
@@ -72,6 +72,8 @@ export function useGoogleLinkPending() {
 export async function startGoogleLink(
   provider: "gsc" | "ga4" | "youtube",
   callbackURL: string,
+  // Search Console only: re-consent with write access for sitemap management.
+  opts?: { gscWrite?: boolean },
 ): Promise<boolean> {
   if (linkRedirectPending) return false;
   setLinkPending(true);
@@ -80,13 +82,16 @@ export async function startGoogleLink(
     const config = googleProviders[provider];
     let url: string | undefined;
     if (!isHostedClientAuthMode()) {
-      const res = await config.startSelfHosted({ data: { callbackURL } });
+      const res = await config.startSelfHosted({
+        data: { callbackURL, write: opts?.gscWrite },
+      });
       url = res.url;
     } else {
       const res = await authClient.oauth2.link({
         providerId: config.providerId,
         callbackURL,
         errorCallbackURL: withGoogleLinkErrorParam(callbackURL, provider),
+        ...(opts?.gscWrite ? { scopes: [...GSC_WRITE_OAUTH_SCOPES] } : {}),
       });
       if (res.error) {
         toast.error(res.error.message ?? "Could not start Google sign-in");

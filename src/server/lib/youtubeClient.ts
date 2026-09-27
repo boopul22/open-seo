@@ -253,7 +253,7 @@ function numericString(value: string | number | undefined): number | null {
 }
 
 /** ISO-8601 video duration (PT#H#M#S) to seconds; null when unparseable. */
-export function parseIsoDurationSeconds(value: string): number | null {
+function parseIsoDurationSeconds(value: string): number | null {
   const match =
     /^P(?:(\d+)D)?T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/.exec(value);
   if (!match) return null;

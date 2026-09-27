@@ -27,6 +27,10 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-}
+      # Optional: Core Web Vitals (Chrome UX Report) and sitemap-wide
+      # PageSpeed sweeps. One Google Cloud key can serve both.
+      - CRUX_API_KEY=${CRUX_API_KEY:-}
+      - PAGESPEED_API_KEY=${PAGESPEED_API_KEY:-}
       # Optional: AI features (SAM, the in-app SEO agent)
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - OPENROUTER_MODEL=${OPENROUTER_MODEL:-}

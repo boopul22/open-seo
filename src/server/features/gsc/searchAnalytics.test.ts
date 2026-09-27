@@ -110,11 +110,11 @@ describe("buildSearchAnalyticsRequest", () => {
     expect(request.rowLimit).toBe(250);
   });
 
-  it("clamps rowLimit to the 1000 ceiling", () => {
+  it("clamps rowLimit to Google's 25,000-row ceiling", () => {
     expect(
       buildSearchAnalyticsRequest({ projectId: "p1", rowLimit: 99999 }, TODAY)
         .rowLimit,
-    ).toBe(1000);
+    ).toBe(25_000);
     expect(
       buildSearchAnalyticsRequest({ projectId: "p1", rowLimit: 0 }, TODAY)
         .rowLimit,

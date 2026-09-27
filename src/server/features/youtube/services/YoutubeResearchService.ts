@@ -31,8 +31,8 @@ import {
 
 export const MAX_RESEARCH_CHANNELS = 20;
 /** Uploads sampled per channel when a caller does not ask for more. */
-export const DEFAULT_SAMPLE_SIZE = 30;
-export const getChannelSampleSize = DEFAULT_SAMPLE_SIZE;
+const DEFAULT_SAMPLE_SIZE = 30;
+const getChannelSampleSize = DEFAULT_SAMPLE_SIZE;
 
 // Refresh samples deeper than interactive lists: a snapshot is only as useful
 // as the uploads it covers, and 200 is two API pages of 50-video batches.

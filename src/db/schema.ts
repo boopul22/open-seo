@@ -10,10 +10,12 @@ import * as sqliteAuth from "./better-auth-schema";
 import * as sqliteBilling from "./billing.schema";
 import * as sqliteGa4 from "./ga4.schema";
 import * as sqliteGsc from "./gsc.schema";
+import * as sqliteGscIndex from "./gsc-index.schema";
 import * as sqliteYoutube from "./youtube.schema";
 import * as sqliteYoutubeResearch from "./youtube-research.schema";
 import * as sqliteYoutubeKeyword from "./youtube-keyword.schema";
 import * as sqliteTelemetry from "./telemetry.schema";
+import * as sqlitePageSpeed from "./pagespeed.schema";
 import * as pgApp from "./pg/app.schema";
 import * as pgProjectContext from "./pg/project-context.schema";
 import * as pgReports from "./pg/reports.schema";
@@ -25,10 +27,12 @@ import * as pgAuth from "./pg/better-auth-schema";
 import * as pgBilling from "./pg/billing.schema";
 import * as pgGa4 from "./pg/ga4.schema";
 import * as pgGsc from "./pg/gsc.schema";
+import * as pgGscIndex from "./pg/gsc-index.schema";
 import * as pgYoutube from "./pg/youtube.schema";
 import * as pgYoutubeResearch from "./pg/youtube-research.schema";
 import * as pgYoutubeKeyword from "./pg/youtube-keyword.schema";
 import * as pgTelemetry from "./pg/telemetry.schema";
+import * as pgPageSpeed from "./pg/pagespeed.schema";
 
 // Canonical schema barrel. Repositories import their tables from here and the
 // provider-aware `db` from "@/db", so each repository is written ONCE for both
@@ -51,10 +55,12 @@ type AppSchema = typeof sqliteApp &
   typeof sqliteBilling &
   typeof sqliteGa4 &
   typeof sqliteGsc &
+  typeof sqliteGscIndex &
   typeof sqliteYoutube &
   typeof sqliteYoutubeResearch &
   typeof sqliteYoutubeKeyword &
-  typeof sqliteTelemetry;
+  typeof sqliteTelemetry &
+  typeof sqlitePageSpeed;
 
 const runtimeSchema =
   getDatabaseProvider() === "postgres"
@@ -70,10 +76,12 @@ const runtimeSchema =
         ...pgBilling,
         ...pgGa4,
         ...pgGsc,
+        ...pgGscIndex,
         ...pgYoutube,
         ...pgYoutubeResearch,
         ...pgYoutubeKeyword,
         ...pgTelemetry,
+        ...pgPageSpeed,
       }
     : {
         ...sqliteApp,
@@ -87,10 +95,12 @@ const runtimeSchema =
         ...sqliteBilling,
         ...sqliteGa4,
         ...sqliteGsc,
+        ...sqliteGscIndex,
         ...sqliteYoutube,
         ...sqliteYoutubeResearch,
         ...sqliteYoutubeKeyword,
         ...sqliteTelemetry,
+        ...sqlitePageSpeed,
       };
 
 // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- guarded by schema-parity.test.ts
@@ -125,6 +135,7 @@ export const {
   auditPages,
   auditIssues,
   auditLighthouseResults,
+  auditSchedules,
   samSessions,
   user,
   session,
@@ -137,6 +148,14 @@ export const {
   billingCustomerStatus,
   ga4Connections,
   gscConnections,
+  gscSitemaps,
+  gscSitemapContents,
+  gscIndexUrls,
+  gscUrlInspections,
+  gscUrlInspectionLinks,
+  gscUrlRichResultIssues,
+  gscIndexSweeps,
+  gscInspectionUsage,
   youtubeConnections,
   youtubeResearchChannels,
   youtubeChannelSnapshots,
@@ -144,4 +163,8 @@ export const {
   youtubeKeywordQueries,
   youtubeKeywordVideos,
   telemetryState,
+  pagespeedSweeps,
+  pagespeedResults,
+  pagespeedResultIssues,
+  pagespeedUsage,
 } = schema;

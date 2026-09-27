@@ -11,6 +11,9 @@ import { hasSelfHostedGoogleOAuthConfig } from "@/server/features/google/oauth-c
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 import { GscService } from "@/server/features/gsc/services/GscService";
 import {
+  GSC_AGGREGATION_TYPES,
+  GSC_API_MAX_ROWS,
+  GSC_DATA_STATES,
   GSC_DATE_RANGES,
   GSC_DEFAULT_ROW_LIMIT,
   GSC_DIMENSIONS,
@@ -27,6 +30,9 @@ import {
 import { GSC_SELF_HOSTED_SETUP_DOCS_URL } from "@/shared/gsc";
 
 const TEXT_SUMMARY_ROWS = 15;
+// The text table repeats what structuredContent carries; past this many rows
+// it only costs context.
+const TEXT_TABLE_ROWS = 100;
 
 type GscPerfRow = {
   keys?: string[];
@@ -58,7 +64,7 @@ type ProjectAuthContext = {
   baseUrl: string;
 };
 
-function connectGscUrl(baseUrl: string, projectId: string): string {
+export function connectGscUrl(baseUrl: string, projectId: string): string {
   // GSC Insights hosts the connection card AND the data the user came for,
   // so land them there rather than in settings.
   return buildDashboardUrl(baseUrl, `/p/${projectId}/search-performance`);
@@ -67,7 +73,7 @@ function connectGscUrl(baseUrl: string, projectId: string): string {
 /** Self-hosted GSC requires the operator to provide a Google OAuth client and
  *  BETTER_AUTH_SECRET. Hosted mode always has both; self-hosted tools return this
  *  setup nudge before attempting a token lookup when either is missing. */
-async function missingSelfHostedGoogleClientResponse(
+export async function missingSelfHostedGoogleClientResponse(
   context: ProjectAuthContext,
   projectId: string,
 ) {
@@ -100,7 +106,7 @@ function invalidRequest(
   });
 }
 
-function describeGscError(error: unknown): string {
+export function describeGscError(error: unknown): string {
   if (error instanceof GscNotConnectedError) {
     return "Search Console is not connected for this project.";
   }
@@ -180,7 +186,7 @@ const perfInputSchema = {
     .max(4)
     .optional()
     .describe(
-      "Group rows by these dimensions. Default ['query']. Use ['page'] for top pages, ['query','page'] to map queries to pages / spot cannibalization, ['date'] for a time series.",
+      "Group rows by these dimensions. Default ['query']. Use ['page'] for top pages, ['query','page'] to map queries to pages / spot cannibalization, ['date'] for a time series, ['hour'] for the last few days hour by hour (implies dataState 'hourly_all'). searchAppearance must be the only dimension.",
     ),
   dateRange: z
     .enum(GSC_DATE_RANGES)
@@ -203,7 +209,22 @@ const perfInputSchema = {
     .max(5)
     .optional()
     .describe(
-      "AND-combined filters. To get the queries for one page: [{dimension:'page',operator:'equals',expression:'https://example.com/post'}] with dimensions ['query'].",
+      "AND-combined filters. To get the queries for one page: [{dimension:'page',operator:'equals',expression:'https://example.com/post'}] with dimensions ['query']. Regex operators use RE2 syntax.",
+    ),
+  filterGroups: z
+    .array(
+      z.object({
+        groupType: z
+          .literal("and")
+          .default("and")
+          .describe("Google only supports 'and' within a group."),
+        filters: z.array(filterSchema).min(1).max(5),
+      }),
+    )
+    .max(3)
+    .optional()
+    .describe(
+      "Extra filter groups, ANDed with `filters` and each other (Google's dimensionFilterGroups). For OR logic use one includingRegex filter instead.",
     ),
   rowLimit: z
     .number()
@@ -212,9 +233,19 @@ const perfInputSchema = {
     .max(GSC_MAX_ROW_LIMIT)
     .optional()
     .describe(
-      `Rows per call (default ${GSC_DEFAULT_ROW_LIMIT}, max ${GSC_MAX_ROW_LIMIT}). GSC sorts by clicks desc; paginate with startRow when hasMore is true.`,
+      `Rows per call (default ${GSC_DEFAULT_ROW_LIMIT}, max ${GSC_MAX_ROW_LIMIT}). GSC sorts by clicks desc; when hasMore is true pass nextCursor back as cursor to get the next page, until hasMore is false (that is every row Google has).`,
     ),
-  startRow: z.number().int().min(0).optional().describe("Pagination offset."),
+  startRow: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe("Row offset. Prefer `cursor`; startRow is kept for old callers."),
+  cursor: z
+    .string()
+    .regex(/^\d+$/)
+    .optional()
+    .describe("nextCursor from the previous page."),
   minPosition: z
     .number()
     .min(1)
@@ -238,9 +269,17 @@ const perfInputSchema = {
     .optional()
     .describe("Search type (default web)."),
   dataState: z
-    .enum(["all", "final"])
+    .enum(GSC_DATA_STATES)
     .optional()
-    .describe("'all' (default) includes fresh/incomplete recent data."),
+    .describe(
+      "'all' (default) includes fresh/incomplete recent data; 'final' only finalized days; 'hourly_all' returns hourly rows (needed for the hour dimension).",
+    ),
+  aggregationType: z
+    .enum(GSC_AGGREGATION_TYPES)
+    .optional()
+    .describe(
+      "How Google aggregates: 'auto' (default), 'byProperty' (counts a query once per property), 'byPage' (once per page; required when grouping or filtering by page for exact page totals), 'byNewsShowcasePanel' (News showcase, type discover/googleNews only).",
+    ),
 } as const;
 
 type PerfArgs = z.infer<z.ZodObject<typeof perfInputSchema>>;
@@ -250,7 +289,7 @@ export const getSearchConsolePerformanceTool = {
   config: {
     title: "Get Google Search Console performance",
     description:
-      "Query the connected Search Console property's Search Analytics: clicks, impressions, CTR, and average position by query/page/country/device/date. First-party data — use it for what already ranks, near-ranking queries, and pages with real demand. Google sorts by clicks and can't filter by position, so minPosition/maxPosition/minImpressions are applied server-side over the top 1000 rows of the window — use them instead of fetching everything. ctr is a 0-1 fraction; position is a 1-based average and is omitted from rows when type is 'discover' or 'googleNews' (Google does not report it there — treat it as unavailable, not a failure); dates are Pacific Time; the last ~3 days may be incomplete. Read-only; uses no credits.",
+      "Query the connected Search Console property's Search Analytics: clicks, impressions, CTR, and average position by query/page/country/device/date/hour/searchAppearance, for any search type (web, image, video, news, discover, googleNews). First-party data — use it for what already ranks, near-ranking queries, and pages with real demand. Pages hold up to 5,000 rows; follow nextCursor until hasMore is false to read every row Google has. Google sorts by clicks and can't filter by position, so minPosition/maxPosition/minImpressions are applied server-side over the top 25,000 rows of the window — use them instead of fetching everything. ctr is a 0-1 fraction; position is a 1-based average and is omitted from rows when type is 'discover' or 'googleNews' (Google does not report it there — treat it as unavailable, not a failure); dates are Pacific Time; the last ~3 days may be incomplete. Read-only; uses no credits.",
     inputSchema: perfInputSchema,
     outputSchema: z.looseObject({
       ok: z.boolean(),
@@ -280,6 +319,7 @@ export const getSearchConsolePerformanceTool = {
         .optional(),
       hasMore: z.boolean().optional(),
       nextStartRow: z.number().optional(),
+      nextCursor: z.string().optional(),
       ...optionalMetaOutputSchema,
     }),
     annotations: {
@@ -313,6 +353,16 @@ export const getSearchConsolePerformanceTool = {
         "searchAppearance must be the only dimension when used.",
       );
     }
+    if (
+      args.dimensions?.includes("hour") &&
+      args.dataState &&
+      args.dataState !== "hourly_all"
+    ) {
+      return invalidRequest(
+        meta,
+        "The hour dimension needs dataState 'hourly_all' (or leave dataState unset).",
+      );
+    }
     // A half-specified explicit range would silently fall back to a default window.
     if (Boolean(args.startDate) !== Boolean(args.endDate)) {
       return invalidRequest(
@@ -326,7 +376,7 @@ export const getSearchConsolePerformanceTool = {
       const metricFilter = pickMetricFilter(args);
       // Google can't filter by position or impressions, so with a metric filter
       // we fetch the full window and filter here; fetched == returned otherwise.
-      const fetchLimit = metricFilter ? GSC_MAX_ROW_LIMIT : requestedLimit;
+      const fetchLimit = metricFilter ? GSC_API_MAX_ROWS : requestedLimit;
       const result = await GscService.getPerformance({
         projectId: args.projectId,
         dimensions: args.dimensions,
@@ -334,10 +384,12 @@ export const getSearchConsolePerformanceTool = {
         startDate: args.startDate,
         endDate: args.endDate,
         filters: args.filters,
+        filterGroups: args.filterGroups,
         rowLimit: fetchLimit,
-        startRow: args.startRow,
+        startRow: args.cursor ? Number(args.cursor) : args.startRow,
         type: args.type,
         dataState: args.dataState,
+        aggregationType: args.aggregationType,
       } satisfies GscPerformanceInput);
       const dimensions = result.request.dimensions ?? ["query"];
       const startRow = result.request.startRow ?? 0;
@@ -362,10 +414,11 @@ export const getSearchConsolePerformanceTool = {
         : "";
       const header =
         `${result.siteUrl} · ${dimensions.join("+")} · ${result.request.startDate}→${result.request.endDate} · ` +
-        `${rows.length} row${rows.length === 1 ? "" : "s"}${filterText}${hasMore ? " (more available — paginate with startRow)" : ""}`;
+        `${rows.length} row${rows.length === 1 ? "" : "s"}${filterText}${hasMore ? ` (more available — pass cursor "${nextStartRow}")` : ""}`;
+      const tableRows = rows.slice(0, TEXT_TABLE_ROWS);
       const text =
         rows.length > 0
-          ? `${header}\n${formatMcpTable(rows, GSC_PERF_COLUMNS)}`
+          ? `${header}\n${formatMcpTable(tableRows, GSC_PERF_COLUMNS)}${rows.length > tableRows.length ? `\n… ${rows.length - tableRows.length} more rows in structuredContent.rows` : ""}`
           : `${header}\nNo rows for this query/date range.`;
 
       return mcpResponse({
@@ -381,6 +434,7 @@ export const getSearchConsolePerformanceTool = {
           rows,
           hasMore,
           nextStartRow: hasMore ? nextStartRow : undefined,
+          nextCursor: hasMore ? String(nextStartRow) : undefined,
         },
       });
     } catch (error) {

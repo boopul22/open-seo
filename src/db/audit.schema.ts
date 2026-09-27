@@ -4,6 +4,7 @@ import {
   integer,
   real,
   index,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 import { PAGE_FETCH_CLASSES } from "@/shared/audit-fetch-class";
@@ -178,5 +179,42 @@ export const auditLighthouseResults = sqliteTable(
   (table) => [
     index("audit_lighthouse_results_audit_id_idx").on(table.auditId),
     index("audit_lighthouse_results_page_id_idx").on(table.pageId),
+  ],
+);
+
+// Weekly automatic audit, at most one per project; deleting the row turns it
+// off. The scheduler keeps the two most recent scheduled audits (last and
+// previous) for a week-over-week issue diff and deletes older ones, so a
+// schedule never grows the org's audit capacity. Manual audits are untouched.
+export const auditSchedules = sqliteTable(
+  "audit_schedules",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    startUrl: text("start_url").notNull(),
+    maxPages: integer("max_pages").notNull(),
+    // Actor and billing identity for the audits it starts. No FK, mirroring
+    // audits.started_by_user_id.
+    createdByUserId: text("created_by_user_id").notNull(),
+    nextRunAt: text("next_run_at").notNull(),
+    lastRunAt: text("last_run_at"),
+    lastAuditId: text("last_audit_id").references(() => audits.id, {
+      onDelete: "set null",
+    }),
+    previousAuditId: text("previous_audit_id").references(() => audits.id, {
+      onDelete: "set null",
+    }),
+    // Why the latest due run didn't start an audit (an AppError code or
+    // "previous_still_running"); null after a successful start.
+    lastSkipReason: text("last_skip_reason"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    uniqueIndex("audit_schedules_project_id_idx").on(table.projectId),
+    index("audit_schedules_next_run_at_idx").on(table.nextRunAt),
   ],
 );

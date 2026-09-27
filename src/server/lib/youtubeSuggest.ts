@@ -2,10 +2,9 @@
 // no YouTube Data API quota. It returns the strings YouTube autocompletes in
 // its search box — query ideas, not search volume.
 
-export const SUGGEST_ENDPOINT =
-  "https://suggestqueries.google.com/complete/search";
-export const SUGGEST_DEFAULT_LIMIT = 25;
-export const SUGGEST_MAX_LIMIT = 50;
+const SUGGEST_ENDPOINT = "https://suggestqueries.google.com/complete/search";
+const SUGGEST_DEFAULT_LIMIT = 25;
+const SUGGEST_MAX_LIMIT = 50;
 
 export function clampSuggestLimit(limit: number): number {
   if (!Number.isFinite(limit)) return SUGGEST_DEFAULT_LIMIT;

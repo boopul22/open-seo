@@ -80,7 +80,7 @@ export function computeChannelStats(
   };
 }
 
-export type YoutubeVideoScore = {
+type YoutubeVideoScore = {
   ageDays: number;
   viewsPerDay: number;
   outlierScore: number;

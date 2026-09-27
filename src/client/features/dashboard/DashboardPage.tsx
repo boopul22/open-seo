@@ -8,6 +8,7 @@ import {
   GscCard,
 } from "@/client/features/dashboard/DashboardCards";
 import { Ga4Card } from "@/client/features/dashboard/Ga4Card";
+import { PageSpeedCard } from "@/client/features/dashboard/PageSpeedCard";
 import { WorkspaceMergeBanner } from "@/client/features/dashboard/WorkspaceMergeBanner";
 import { YoutubeDashboard } from "@/client/features/youtube/YoutubeDashboard";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
@@ -117,6 +118,15 @@ export function DashboardPage({ projectId }: { projectId: string }) {
                 audit={overview?.audit ?? null}
               />
             ),
+          },
+        ]
+      : []),
+    ...(activation.domain !== null && !isYoutubeProject
+      ? [
+          {
+            key: "pagespeed",
+            hasData: true,
+            node: <PageSpeedCard projectId={projectId} />,
           },
         ]
       : []),

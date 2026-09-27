@@ -218,6 +218,27 @@
       "when": 1790281388984,
       "tag": "0030_seo_changes",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1790422302010,
+      "tag": "0031_gsc_index_coverage",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1790492105597,
+      "tag": "0032_audit_schedules",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1790497015913,
+      "tag": "0033_pagespeed",
+      "breakpoints": true
     }
   ]
 }

@@ -366,7 +366,7 @@ function pickBestDay(rows: YoutubePublishDay[]): YoutubeWeekday | null {
   return best?.weekday ?? null;
 }
 
-export type YoutubeVideoTrend = {
+type YoutubeVideoTrend = {
   videoId: string;
   points: YoutubeVideoTrendPoint[];
   warnings: string[];
@@ -457,7 +457,7 @@ async function getChannelGrowth(input: {
   });
 }
 
-export type YoutubeBestPublishDays = {
+type YoutubeBestPublishDays = {
   channel: { channelId: string; channelTitle: string };
   range: { startDate: string; endDate: string };
   weekdays: YoutubePublishDay[];

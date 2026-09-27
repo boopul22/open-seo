@@ -1,11 +1,19 @@
 import { getAuth } from "@/lib/auth";
 import { GSC_OAUTH_PROVIDER_ID } from "@/shared/gsc";
-import { GscApiError, GscTokenError } from "./gscErrors";
+import { GscApiError, GscTokenError, isGscDailyQuotaError } from "./gscErrors";
 
 export { GscApiError, GscTokenError } from "./gscErrors";
 
 const GSC_API_BASE = "https://www.googleapis.com/webmasters/v3";
+const GSC_INSPECT_URL =
+  "https://searchconsole.googleapis.com/v1/urlInspection/index:inspect";
 const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
+
+// Waits before retrying a 429 or 5xx. Google's per-minute limits refill within
+// a minute, so three short retries clear a burst; a daily quota error is never
+// retried because it cannot clear before midnight Pacific.
+const DEFAULT_RETRY_DELAYS_MS = [1_000, 4_000, 15_000];
+const MAX_RETRY_AFTER_MS = 60_000;
 
 /** A GSC REST call returned a non-2xx status. `status` drives user-facing messaging. */
 export type GscSite = {
@@ -32,7 +40,7 @@ export type GscSearchAnalyticsRequest = {
   endDate: string;
   dimensions?: string[];
   dimensionFilterGroups?: Array<{
-    groupType: "and" | "or";
+    groupType: "and";
     filters: GscDimensionFilter[];
   }>;
   rowLimit?: number;
@@ -42,8 +50,22 @@ export type GscSearchAnalyticsRequest = {
   aggregationType?: string;
 };
 
-/** Subset of the URL Inspection API `inspectionResult` we surface. The wire
- *  shape is richer; extra fields are ignored. */
+/** Webmasters API `sitemaps` resource. Counts arrive as int64 strings. */
+export type GscSitemap = {
+  path: string;
+  type?: string;
+  isPending?: boolean;
+  isSitemapsIndex?: boolean;
+  lastSubmitted?: string;
+  lastDownloaded?: string;
+  errors?: string;
+  warnings?: string;
+  contents?: Array<{ type?: string; submitted?: string; indexed?: string }>;
+};
+
+export type GscRichResultIssue = { issueMessage?: string; severity?: string };
+
+/** URL Inspection API `inspectionResult`. Extra wire fields are ignored. */
 export type UrlInspectionResult = {
   indexStatusResult?: {
     verdict?: string;
@@ -58,8 +80,17 @@ export type UrlInspectionResult = {
     sitemap?: string[];
     referringUrls?: string[];
   };
-  mobileUsabilityResult?: { verdict?: string };
-  richResultsResult?: { verdict?: string };
+  mobileUsabilityResult?: {
+    verdict?: string;
+    issues?: Array<{ issueType?: string; severity?: string; message?: string }>;
+  };
+  richResultsResult?: {
+    verdict?: string;
+    detectedItems?: Array<{
+      richResultType?: string;
+      items?: Array<{ name?: string; issues?: GscRichResultIssue[] }>;
+    }>;
+  };
   inspectionResultLink?: string;
 };
 
@@ -68,12 +99,31 @@ function messageForStatus(status: number, body: string): string {
     return "Search Console denied access to this property (no verified permission, or the connection was revoked).";
   }
   if (status === 429) {
-    return "Search Console rate limit reached. Retry shortly.";
+    return isGscDailyQuotaError(status, body)
+      ? "Search Console daily quota for this property is used up. It resets at midnight Pacific Time."
+      : "Search Console rate limit reached. Retry shortly.";
   }
   if (status === 404) {
-    return "Search Console property not found. It may have been removed in Search Console.";
+    return "Search Console property or resource not found. It may have been removed in Search Console.";
   }
   return `Search Console API error (${status}): ${body.slice(0, 300)}`;
+}
+
+function retryAfterMs(response: Response): number | null {
+  const header = response.headers.get("retry-after");
+  if (!header) return null;
+  const seconds = Number(header);
+  if (!Number.isFinite(seconds) || seconds < 0) return null;
+  return Math.min(seconds * 1_000, MAX_RETRY_AFTER_MS);
+}
+
+function isRetryable(status: number, body: string): boolean {
+  if (status === 429) return !isGscDailyQuotaError(status, body);
+  return status >= 500;
+}
+
+function sitePath(siteUrl: string): string {
+  return `${GSC_API_BASE}/sites/${encodeURIComponent(siteUrl)}`;
 }
 
 /** Free Google Search Console client. Unlike the DataForSEO client it does NOT
@@ -83,7 +133,11 @@ function messageForStatus(status: number, body: string): string {
 export function createGscClient(opts: {
   userId: string;
   gscAccountId?: string;
+  /** Backoff schedule for 429/5xx; tests pass zeros. */
+  retryDelaysMs?: number[];
 }) {
+  const retryDelaysMs = opts.retryDelaysMs ?? DEFAULT_RETRY_DELAYS_MS;
+
   async function getToken(): Promise<string> {
     let result: { accessToken?: string } | undefined;
     try {
@@ -112,29 +166,43 @@ export function createGscClient(opts: {
     return result.accessToken;
   }
 
-  async function request<T>(
+  /** fetch with auth, 429/5xx backoff, and GscApiError on failure. */
+  async function send(
     url: string,
     init?: { method?: string; body?: unknown },
-  ): Promise<T> {
+  ): Promise<Response> {
     const token = await getToken();
     const hasBody = init?.body !== undefined;
-    const response = await fetch(url, {
-      method: init?.method ?? "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...(hasBody ? { "Content-Type": "application/json" } : {}),
-      },
-      body: hasBody ? JSON.stringify(init?.body) : undefined,
-    });
-    if (!response.ok) {
+    for (let attempt = 0; ; attempt++) {
+      const response = await fetch(url, {
+        method: init?.method ?? "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(hasBody ? { "Content-Type": "application/json" } : {}),
+        },
+        body: hasBody ? JSON.stringify(init?.body) : undefined,
+      });
+      if (response.ok) return response;
       const body = await response.text().catch(() => "");
+      const delay = retryDelaysMs[attempt];
+      if (delay !== undefined && isRetryable(response.status, body)) {
+        const wait = retryAfterMs(response) ?? delay;
+        if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
       throw new GscApiError(
         response.status,
         messageForStatus(response.status, body),
         body,
       );
     }
-    return (await response.json()) as T;
+  }
+
+  async function request<T>(
+    url: string,
+    init?: { method?: string; body?: unknown },
+  ): Promise<T> {
+    return (await send(url, init)).json<T>();
   }
 
   return {
@@ -157,10 +225,47 @@ export function createGscClient(opts: {
       body: GscSearchAnalyticsRequest,
     ): Promise<GscSearchAnalyticsRow[]> {
       const data = await request<{ rows?: GscSearchAnalyticsRow[] }>(
-        `${GSC_API_BASE}/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
+        `${sitePath(siteUrl)}/searchAnalytics/query`,
         { method: "POST", body },
       );
       return data.rows ?? [];
+    },
+
+    /** `sitemaps.list`. With `sitemapIndex`, lists that index's children. */
+    async listSitemaps(
+      siteUrl: string,
+      sitemapIndex?: string,
+    ): Promise<GscSitemap[]> {
+      const query = sitemapIndex
+        ? `?sitemapIndex=${encodeURIComponent(sitemapIndex)}`
+        : "";
+      const data = await request<{ sitemap?: GscSitemap[] }>(
+        `${sitePath(siteUrl)}/sitemaps${query}`,
+      );
+      return data.sitemap ?? [];
+    },
+
+    async getSitemap(siteUrl: string, feedpath: string): Promise<GscSitemap> {
+      return request<GscSitemap>(
+        `${sitePath(siteUrl)}/sitemaps/${encodeURIComponent(feedpath)}`,
+      );
+    },
+
+    /** Needs the full `webmasters` scope; readonly grants get a 403. */
+    async submitSitemap(siteUrl: string, feedpath: string): Promise<void> {
+      // sitemaps.submit and sitemaps.delete answer 204 with no body.
+      await send(
+        `${sitePath(siteUrl)}/sitemaps/${encodeURIComponent(feedpath)}`,
+        { method: "PUT" },
+      );
+    },
+
+    /** Needs the full `webmasters` scope; readonly grants get a 403. */
+    async deleteSitemap(siteUrl: string, feedpath: string): Promise<void> {
+      await send(
+        `${sitePath(siteUrl)}/sitemaps/${encodeURIComponent(feedpath)}`,
+        { method: "DELETE" },
+      );
     },
 
     /** URL Inspection API `urlInspection.index.inspect`. This lives on a
@@ -172,7 +277,7 @@ export function createGscClient(opts: {
       languageCode?: string,
     ): Promise<UrlInspectionResult | null> {
       const data = await request<{ inspectionResult?: UrlInspectionResult }>(
-        "https://searchconsole.googleapis.com/v1/urlInspection/index:inspect",
+        GSC_INSPECT_URL,
         {
           method: "POST",
           body: {
@@ -186,3 +291,5 @@ export function createGscClient(opts: {
     },
   };
 }
+
+export type GscClient = ReturnType<typeof createGscClient>;

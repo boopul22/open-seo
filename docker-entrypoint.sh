@@ -36,4 +36,18 @@ else
   printf '%s' "$FINGERPRINT" > "$FP_FILE"
 fi
 
+# vite preview runs no cron triggers. Fire the Search Console index-sweep
+# trigger (and only that one) shortly after start and then every 15 minutes,
+# so daily sweeps start, quota-paused sweeps resume, and sweeps interrupted by
+# a container restart are relaunched. The same trigger starts due weekly
+# scheduled site audits. Other crons stay off, as before.
+(
+  sleep 120
+  while true; do
+    curl -fsS -o /dev/null "http://127.0.0.1:${PORT:-8741}/cdn-cgi/handler/scheduled?cron=7+*+*+*+*" \
+      || echo "Search Console sweep trigger failed; retrying in 15 minutes."
+    sleep 900
+  done
+) &
+
 exec pnpm exec vite preview --host 0.0.0.0 --port "${PORT:-8741}"

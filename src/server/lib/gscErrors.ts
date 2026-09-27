@@ -25,3 +25,10 @@ export class GscNotConnectedError extends Error {
     this.name = "GscNotConnectedError";
   }
 }
+
+/** Google answers an exhausted per-day quota with a 429 whose message names
+ *  the daily limit ("Queries per day"). Per-minute 429s clear in seconds and
+ *  are retried; a daily one lasts until midnight Pacific Time. */
+export function isGscDailyQuotaError(status: number, body = ""): boolean {
+  return status === 429 && /per ?day|daily/i.test(body);
+}

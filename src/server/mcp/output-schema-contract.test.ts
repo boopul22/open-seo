@@ -64,18 +64,43 @@ function closedOutputPaths(schema: unknown, path: string): string[] {
   return failures;
 }
 
+const testProps = createWorkersOAuthMcpProps({
+  userId: "user_test",
+  userEmail: "test@example.com",
+  organizationId: "org_test",
+  baseUrl: "https://open-seo.test",
+  clientId: "client_test",
+  scopes: ["mcp"],
+});
+
+async function listToolNames(gscWriteTools: boolean) {
+  const server = createOpenSeoMcpServer(testProps, { gscWriteTools });
+  const client = new Client({ name: "tool-list", version: "1" });
+  const [clientTransport, serverTransport] =
+    InMemoryTransport.createLinkedPair();
+  try {
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    return (await client.listTools()).tools.map((tool) => tool.name);
+  } finally {
+    await client.close();
+    await server.close();
+  }
+}
+
+describe("Search Console write tools", () => {
+  it("are listed only for a write-scoped grant", async () => {
+    expect(await listToolNames(false)).not.toContain("submit_sitemap");
+    expect(await listToolNames(true)).toEqual(
+      expect.arrayContaining(["submit_sitemap", "delete_sitemap"]),
+    );
+  });
+});
+
 describe("published MCP output schemas", () => {
   it("allows added fields in every registered tool, including nested objects", async () => {
-    const server = createOpenSeoMcpServer(
-      createWorkersOAuthMcpProps({
-        userId: "user_test",
-        userEmail: "test@example.com",
-        organizationId: "org_test",
-        baseUrl: "https://open-seo.test",
-        clientId: "client_test",
-        scopes: ["mcp"],
-      }),
-    );
+    // Write tools on, so their schemas are checked too.
+    const server = createOpenSeoMcpServer(testProps, { gscWriteTools: true });
     const client = new Client({ name: "output-schema-contract", version: "1" });
     const [clientTransport, serverTransport] =
       InMemoryTransport.createLinkedPair();

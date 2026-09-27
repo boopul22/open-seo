@@ -9,10 +9,7 @@ import { requireProjectContext } from "@/serverFunctions/middleware";
 // Type-only re-exports so client code can type its rows without importing the
 // server service module at runtime.
 export type {
-  ChannelComparisonRow,
-  OutlierRow,
   ResearchChannelRow,
-  ResearchChannelSummary,
   VideoRow,
 } from "@/server/features/youtube/services/YoutubeResearchService";
 
@@ -140,59 +137,6 @@ export const getYoutubeOutliers = createServerFn({ method: "POST" })
       windowDays: data.windowDays,
       limit: data.limit,
       minScore: data.minScore,
-      userId: context.userId,
-    });
-    return { rows };
-  });
-
-export const getYoutubeChannelStats = createServerFn({ method: "POST" })
-  .middleware(requireProjectContext)
-  .validator(projectScopedSchema.extend({ channel: channelRefSchema }))
-  .handler(async ({ data, context }) =>
-    YoutubeResearchService.getChannelStats({
-      projectId: context.projectId,
-      channel: data.channel,
-      userId: context.userId,
-    }),
-  );
-
-export const compareYoutubeChannels = createServerFn({ method: "POST" })
-  .middleware(requireProjectContext)
-  .validator(
-    projectScopedSchema.extend({
-      channels: z.array(channelRefSchema).min(1).max(5),
-      windowDays: windowDaysSchema.optional(),
-    }),
-  )
-  .handler(async ({ data, context }) => {
-    const rows = await YoutubeResearchService.compareChannels({
-      projectId: context.projectId,
-      channels: data.channels,
-      windowDays: data.windowDays,
-      userId: context.userId,
-    });
-    return { rows };
-  });
-
-export const getYoutubeTrendingVideos = createServerFn({ method: "POST" })
-  .middleware(requireProjectContext)
-  .validator(
-    projectScopedSchema.extend({
-      regionCode: z
-        .string()
-        .trim()
-        .regex(/^[A-Za-z]{2}$/)
-        .optional(),
-      videoCategoryId: z.string().trim().min(1).max(16).optional(),
-      limit: z.number().int().min(1).max(50).optional(),
-    }),
-  )
-  .handler(async ({ data, context }) => {
-    const rows = await YoutubeResearchService.getTrendingVideos({
-      projectId: context.projectId,
-      regionCode: data.regionCode?.toUpperCase(),
-      videoCategoryId: data.videoCategoryId,
-      limit: data.limit,
       userId: context.userId,
     });
     return { rows };

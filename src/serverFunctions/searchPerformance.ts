@@ -28,9 +28,9 @@ const STRIKING_DISTANCE_FETCH_LIMIT = 1000;
 // dimensions:["date"] returns one row per day; the longest range is ~92 days.
 const DAILY_ROW_LIMIT = 200;
 const COUNTRY_ROW_LIMIT = 25;
-// Export pulls the whole dimension in one shot, capped at GSC's per-call max
-// (GSC_MAX_ROW_LIMIT). Large stores get everything up to this ceiling.
-const EXPORT_ROW_LIMIT = 1000;
+// Export pages through the whole dimension in 25,000-row requests. The cap
+// bounds one export's memory; few properties have more queries in a range.
+const EXPORT_ROW_LIMIT = 100_000;
 
 /** Build GSC filter groups shared by every call. Device applies everywhere;
  *  country applies everywhere except the country breakdown itself (so the
@@ -196,14 +196,16 @@ export const exportSearchPerformanceTable = createServerFn({ method: "POST" })
     });
     const { filters } = buildGscFilters(data);
 
-    const result = await GscService.getPerformance({
-      projectId: context.projectId,
-      startDate,
-      endDate,
-      dimensions: [data.dimension],
-      filters,
-      rowLimit: EXPORT_ROW_LIMIT,
-    });
+    const result = await GscService.getAllPerformanceRows(
+      {
+        projectId: context.projectId,
+        startDate,
+        endDate,
+        dimensions: [data.dimension],
+        filters,
+      },
+      EXPORT_ROW_LIMIT,
+    );
 
     return {
       dimension: data.dimension,

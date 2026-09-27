@@ -1,8 +1,8 @@
 import { YOUTUBE_ANALYTICS_LAG_DAYS } from "@/shared/youtube";
 import { YoutubeReportError } from "@/server/lib/youtubeErrors";
 
-export const YOUTUBE_DEFAULT_RANGE_DAYS = 28;
-export const YOUTUBE_MAX_RANGE_DAYS = 730;
+const YOUTUBE_DEFAULT_RANGE_DAYS = 28;
+const YOUTUBE_MAX_RANGE_DAYS = 730;
 
 export type YoutubeResolvedRange = {
   startDate: string;
@@ -25,7 +25,7 @@ export function shiftYoutubeDate(date: string, days: number): string {
   );
 }
 
-export function daysBetweenYoutubeDates(start: string, end: string): number {
+function daysBetweenYoutubeDates(start: string, end: string): number {
   const [startYear, startMonth, startDay] = start.split("-").map(Number);
   const [endYear, endMonth, endDay] = end.split("-").map(Number);
   return Math.round(

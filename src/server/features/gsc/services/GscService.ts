@@ -1,10 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { account } from "@/db/schema";
-import { GSC_OAUTH_PROVIDER_ID } from "@/shared/gsc";
+import { GSC_OAUTH_PROVIDER_ID, grantAllowsGscWrite } from "@/shared/gsc";
 import { AppError } from "@/server/lib/errors";
 import {
   createGscClient,
+  type GscClient,
   type GscSite,
   type UrlInspectionResult,
 } from "@/server/lib/gscClient";
@@ -16,6 +17,7 @@ import {
 export { GscNotConnectedError } from "@/server/lib/gscErrors";
 import {
   buildSearchAnalyticsRequest,
+  GSC_API_MAX_ROWS,
   type GscPerformanceInput,
 } from "@/server/features/gsc/searchAnalytics";
 import {
@@ -77,6 +79,41 @@ async function listGrantsForUser(userId: string) {
         eq(account.providerId, GSC_OAUTH_PROVIDER_ID),
       ),
     );
+}
+
+/** Whether the grant a project's property uses has the opt-in write scope
+ *  (sitemap submit/delete). */
+async function connectionCanWrite(connection: GscConnection): Promise<boolean> {
+  const rows = await db
+    .select({ scope: account.scope, accountId: account.accountId })
+    .from(account)
+    .where(
+      and(
+        eq(account.userId, connection.connectedByUserId),
+        eq(account.providerId, GSC_OAUTH_PROVIDER_ID),
+      ),
+    );
+  const grant = connection.gscAccountId
+    ? rows.find((row) => row.accountId === connection.gscAccountId)
+    : rows.length === 1
+      ? rows[0]
+      : undefined;
+  return grantAllowsGscWrite(grant?.scope);
+}
+
+/** Whether any of this user's Search Console grants can write. Decides if the
+ *  MCP server lists the sitemap write tools at all. */
+async function userHasWriteGrant(userId: string): Promise<boolean> {
+  const rows = await db
+    .select({ scope: account.scope })
+    .from(account)
+    .where(
+      and(
+        eq(account.userId, userId),
+        eq(account.providerId, GSC_OAUTH_PROVIDER_ID),
+      ),
+    );
+  return rows.some((row) => grantAllowsGscWrite(row.scope));
 }
 
 /** Expected ways a stored grant fails to reach Search Console: no token could be
@@ -192,27 +229,83 @@ async function disconnect(input: { projectId: string }): Promise<void> {
   await GscConnectionRepository.deleteByProjectId(input.projectId);
 }
 
+/** The project's connected property and a client on the connector's grant.
+ *  Throws GscNotConnectedError when no property is mapped. */
+async function getProjectClient(
+  projectId: string,
+  opts?: { retryDelaysMs?: number[] },
+): Promise<{ connection: GscConnection; client: GscClient }> {
+  const connection = await GscConnectionRepository.getByProjectId(projectId);
+  if (!connection) {
+    throw new GscNotConnectedError(projectId);
+  }
+  const client = createGscClient({
+    userId: connection.connectedByUserId,
+    gscAccountId: connection.gscAccountId ?? undefined,
+    retryDelaysMs: opts?.retryDelaysMs,
+  });
+  return { connection, client };
+}
+
+/** Page through `searchAnalytics.query` in Google's 25,000-row steps until a
+ *  short page shows the data ran out, or `maxRows` is reached. */
+async function fetchAllRows(
+  client: GscClient,
+  siteUrl: string,
+  request: GscSearchAnalyticsRequest,
+  maxRows: number,
+): Promise<{ rows: GscSearchAnalyticsRow[]; truncated: boolean }> {
+  const rows: GscSearchAnalyticsRow[] = [];
+  let startRow = request.startRow ?? 0;
+  for (;;) {
+    const rowLimit = Math.min(GSC_API_MAX_ROWS, maxRows - rows.length);
+    if (rowLimit <= 0) return { rows, truncated: true };
+    const page = await client.querySearchAnalytics(siteUrl, {
+      ...request,
+      rowLimit,
+      startRow,
+    });
+    rows.push(...page);
+    if (page.length < rowLimit) return { rows, truncated: false };
+    startRow += page.length;
+  }
+}
+
 /** Pass-through of GSC `searchAnalytics.query` for a project's connected property. */
 async function getPerformance(
   input: GscPerformanceInput,
 ): Promise<GscPerformanceResult> {
-  const connection = await GscConnectionRepository.getByProjectId(
-    input.projectId,
-  );
-  if (!connection) {
-    throw new GscNotConnectedError(input.projectId);
-  }
+  const { connection, client } = await getProjectClient(input.projectId);
   const request = buildSearchAnalyticsRequest(input);
-  const client = createGscClient({
-    userId: connection.connectedByUserId,
-    gscAccountId: connection.gscAccountId ?? undefined,
-  });
   const rows = await client.querySearchAnalytics(connection.siteUrl, request);
   return {
     siteUrl: connection.siteUrl,
     connectedBy: connection.connectedAccountEmail,
     request,
     rows,
+  };
+}
+
+/** "All rows" mode: the full result set of a Search Analytics query, paged
+ *  server-side, capped at `maxRows`. */
+async function getAllPerformanceRows(
+  input: GscPerformanceInput,
+  maxRows: number,
+): Promise<GscPerformanceResult & { truncated: boolean }> {
+  const { connection, client } = await getProjectClient(input.projectId);
+  const request = buildSearchAnalyticsRequest(input);
+  const { rows, truncated } = await fetchAllRows(
+    client,
+    connection.siteUrl,
+    request,
+    maxRows,
+  );
+  return {
+    siteUrl: connection.siteUrl,
+    connectedBy: connection.connectedAccountEmail,
+    request,
+    rows,
+    truncated,
   };
 }
 
@@ -237,16 +330,7 @@ async function inspectUrls(input: {
   urls: string[];
   languageCode?: string;
 }): Promise<GscInspectUrlsResult> {
-  const connection = await GscConnectionRepository.getByProjectId(
-    input.projectId,
-  );
-  if (!connection) {
-    throw new GscNotConnectedError(input.projectId);
-  }
-  const client = createGscClient({
-    userId: connection.connectedByUserId,
-    gscAccountId: connection.gscAccountId ?? undefined,
-  });
+  const { connection, client } = await getProjectClient(input.projectId);
   const results: GscUrlInspection[] = [];
   for (const url of input.urls) {
     try {
@@ -278,6 +362,11 @@ export const GscService = {
   listSitesForUserWithGrantStatus,
   setSite,
   disconnect,
+  getProjectClient,
+  connectionCanWrite,
+  userHasWriteGrant,
+  fetchAllRows,
   getPerformance,
+  getAllPerformanceRows,
   inspectUrls,
 };

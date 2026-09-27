@@ -7,15 +7,11 @@ import { requireProjectContext } from "@/serverFunctions/middleware";
 // server service module at runtime.
 export type {
   HighPerformanceKeywords,
-  KeywordChannel,
   KeywordComparison,
-  KeywordComparisonRow,
   KeywordGap,
-  KeywordIdea,
   KeywordIdeas,
   KeywordIdeaSource,
   KeywordPerformance,
-  KeywordPerformanceVideo,
 } from "@/server/features/youtube/services/YoutubeKeywordService";
 
 const projectScopedSchema = z.object({ projectId: z.string().min(1) });
